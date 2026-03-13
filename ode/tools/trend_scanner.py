@@ -133,34 +133,50 @@ def scan_hackernews(top_n: int = 30) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 def scan_reddit(subreddits: list[str], limit: int = 10) -> list[dict]:
-    """Scan Reddit subreddits for hot posts."""
+    """Scan Reddit subreddits for hot posts via RSS feed."""
     try:
         import requests
+        import xml.etree.ElementTree as ET
     except ImportError:
         print("requests not installed: pip install requests", file=sys.stderr)
         return []
 
     results = []
-    headers = {"User-Agent": "ODE/1.0"}
+    headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"}
+    ns = {"atom": "http://www.w3.org/2005/Atom"}
 
     for sub in subreddits:
         try:
             resp = requests.get(
-                f"https://www.reddit.com/r/{sub}/hot.json?limit={limit}",
+                f"https://www.reddit.com/r/{sub}/hot/.rss?limit={limit}",
                 headers=headers, timeout=10,
             )
-            data = resp.json()
-            for post in data.get("data", {}).get("children", []):
-                d = post["data"]
-                score = d.get("score", 0)
+            if resp.status_code != 200:
+                print(f"Reddit r/{sub} RSS returned {resp.status_code}", file=sys.stderr)
+                continue
+
+            root = ET.fromstring(resp.text)
+            entries = root.findall("atom:entry", ns)
+
+            for entry in entries[:limit]:
+                title_el = entry.find("atom:title", ns)
+                link_el = entry.find("atom:link", ns)
+                title = title_el.text if title_el is not None else ""
+                url = link_el.get("href", "") if link_el is not None else ""
+
+                # RSS doesn't include score/comments, estimate from position
+                # Top posts in hot RSS are roughly ordered by engagement
+                position = entries.index(entry)
+                estimated_strength = "强" if position < 3 else "中" if position < 7 else "弱"
+
                 results.append({
                     "source": f"reddit/r/{sub}",
                     "keyword": "",
-                    "title": d.get("title", ""),
-                    "url": f"https://reddit.com{d.get('permalink', '')}",
-                    "score": score,
-                    "comments": d.get("num_comments", 0),
-                    "strength": "强" if score > 500 else "中" if score > 100 else "弱",
+                    "title": title,
+                    "url": url,
+                    "score": 0,
+                    "comments": 0,
+                    "strength": estimated_strength,
                     "momentum": 0,
                 })
         except Exception as e:
