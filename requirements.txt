@@ -1,0 +1,12 @@
+# ODE core
+pyyaml>=6.0
+
+# Web fetching
+requests>=2.28
+
+# Optional: Google Trends
+# pytrends>=4.9
+
+# Testing
+pytest>=7.0
+pytest-asyncio>=0.21

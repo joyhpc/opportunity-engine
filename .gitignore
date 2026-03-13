@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Data (user-specific, not shared)
+data/opportunities/
+data/signals/
+data/competitors/
+data/evidence/
+data/reports/
+data/cache.db
+
+# IDE
+.vscode/
+.idea/
+
+# pytest
+.pytest_cache/
+
+# OS
+.DS_Store
+Thumbs.db

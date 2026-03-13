@@ -1,0 +1,56 @@
+stages:
+  - id: SENSE
+    name: Opportunity Sensing
+    deps: []
+    workers: [scan]
+    description: Collect and filter trend signals from multiple sources
+
+  - id: SCREEN
+    name: Initial Screening
+    deps: [SENSE]
+    workers: [eval]
+    gate:
+      min_score: 50
+      description: "Score >= 70 GO, 50-69 MAYBE, <50 KILL"
+    description: Quick market sizing, competition scan, capability match, rough economics
+
+  - id: ANALYZE
+    name: Deep Analysis
+    deps: [SCREEN]
+    workers: [eval]
+    gate:
+      min_score: 70
+      npv_positive: true
+      no_p0_regulatory: true
+      description: "NPV > 0 and no P0 regulatory risk"
+    description: Deep market dive, competitor analysis, value chain, financial model
+
+  - id: VALIDATE
+    name: Validation
+    deps: [ANALYZE]
+    workers: [eval]
+    gate:
+      min_paid_users: 3
+      min_return_users: 3
+      description: ">=3 paid users + >=3 return users"
+    description: Hypothesis testing, MVP, data analysis
+
+  - id: PLAN
+    name: Business Planning
+    deps: [VALIDATE]
+    workers: [report]
+    gate:
+      description: "Launch approval"
+    description: Business model, go-to-market, resource plan, risk mitigation
+
+  - id: LAUNCH
+    name: Execution
+    deps: [PLAN]
+    workers: []
+    description: Team formation, Phase 1 execution, first revenue
+
+  - id: MONITOR
+    name: Monitoring
+    deps: [LAUNCH]
+    workers: []
+    description: Metrics dashboard, iteration review
