@@ -165,7 +165,7 @@ STORY_TOOL = {
                     "properties": {
                         "page_num": {"type": "integer", "description": "Page number starting from 1"},
                         "text": {"type": "string", "description": "Story text for this page"},
-                        "scene": {"type": "string", "description": "Brief scene description: setting, action, key objects (max 50 words)"},
+                        "scene": {"type": "string", "description": "Illustration scene in English. MUST describe the EXACT action happening in the text: who is doing what, where, with what objects. Example: 'boy with glasses sitting in excavator cockpit, pushing lever, dirt flying from bucket, outdoor construction site'. NO abstract descriptions like 'cozy home' — be specific about the ACTION and KEY OBJECTS."},
                         "emotion": {"type": "string", "description": "Emotional tone of this page"},
                     },
                     "required": ["page_num", "text", "scene", "emotion"],
@@ -262,6 +262,19 @@ Use the create_storybook tool to output the story."""
 
         pages_data = tool_block.input.get("pages", [])
 
+        if not pages_data:
+            # Fallback: try other possible keys
+            for key in tool_block.input:
+                val = tool_block.input[key]
+                if isinstance(val, list) and len(val) > 0:
+                    pages_data = val
+                    issues.append(f"INFO: Found pages under key '{key}' instead of 'pages'")
+                    break
+
+        if not pages_data:
+            issues.append(f"CRITICAL: No pages in tool output. Keys: {list(tool_block.input.keys())}")
+            return [], issues
+
         # Build illustration prompts from scenes
         style_map = {
             "watercolor": "soft watercolor 2D illustration, hand-painted children's picture book art, pastel colors, NOT a photograph, NOT 3D render, NOT realistic",
@@ -272,6 +285,9 @@ Use the create_storybook tool to output the story."""
 
         pages = []
         for p in pages_data:
+            if isinstance(p, str):
+                issues.append(f"ISSUE: page entry is string, not dict: {p[:50]}")
+                continue
             # Compose illustration prompt: anchor + scene + style + negative
             scene = p.get("scene", "")
             illus_prompt = (
@@ -326,62 +342,57 @@ Use the create_storybook tool to output the story."""
 # ---------------------------------------------------------------------------
 
 def generate_illustrations(book: Storybook) -> list[str]:
-    """Generate illustrations using Google Imagen 4 API."""
+    """Generate illustrations using Google Gemini native image generation."""
     issues = []
 
     api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
     if not api_key:
-        issues.append("INFO: No GEMINI_API_KEY set. Skipping illustration generation.")
-        issues.append("INFO: export GEMINI_API_KEY=AIza...")
+        issues.append("INFO: No GEMINI_API_KEY set. Skipping.")
         return issues
 
     try:
         from google import genai
     except ImportError:
-        issues.append("CRITICAL: google-genai not installed: pip install google-genai")
+        issues.append("CRITICAL: google-genai not installed")
         return issues
 
     client = genai.Client(api_key=api_key)
     img_dir = OUTPUT_DIR / f"{book.child.name}_images"
     img_dir.mkdir(parents=True, exist_ok=True)
 
-    model = "imagen-4.0-fast-generate-001"  # $0.02/image, ~4s
+    model = "gemini-2.5-flash-image"
 
     def _gen_one(page: PageContent) -> tuple[int, Optional[str], str]:
         try:
-            r = client.models.generate_images(
+            r = client.models.generate_content(
                 model=model,
-                prompt=page.illustration_prompt,
-                config=genai.types.GenerateImagesConfig(
-                    number_of_images=1,
-                    aspect_ratio="3:4",  # portrait for picture books
+                contents=page.illustration_prompt,
+                config=genai.types.GenerateContentConfig(
+                    response_modalities=["IMAGE", "TEXT"],
                 ),
             )
-            if r.generated_images:
-                img_bytes = r.generated_images[0].image.image_bytes
-                img_path = img_dir / f"page_{page.page_num:02d}.png"
-                img_path.write_bytes(img_bytes)
-                return page.page_num, str(img_path), f"INFO: P{page.page_num} OK ({len(img_bytes)//1024}KB)"
-            return page.page_num, None, f"ISSUE: P{page.page_num} no image returned"
+            for part in r.candidates[0].content.parts:
+                if part.inline_data:
+                    img_bytes = part.inline_data.data
+                    img_path = img_dir / f"page_{page.page_num:02d}.png"
+                    img_path.write_bytes(img_bytes)
+                    return page.page_num, str(img_path), f"INFO: P{page.page_num} OK ({len(img_bytes)//1024}KB)"
+            return page.page_num, None, f"ISSUE: P{page.page_num} no image in response"
         except Exception as e:
             err = str(e)[:120]
             return page.page_num, None, f"ISSUE: P{page.page_num} failed: {err}"
 
-    # Generate sequentially (Imagen has strict rate limits)
     start = time.time()
     for page in book.pages:
         page_num, img_path, issue = _gen_one(page)
         issues.append(issue)
         if img_path:
             page.image_path = img_path
-        time.sleep(0.5)  # Rate limit buffer
+        time.sleep(1)  # Rate limit buffer
 
     elapsed = time.time() - start
     success = sum(1 for p in book.pages if p.image_path)
     issues.append(f"INFO: Generated {success}/{len(book.pages)} illustrations in {elapsed:.1f}s ({model})")
-    if success > 0:
-        cost = success * 0.02
-        issues.append(f"INFO: Estimated cost: ${cost:.2f}")
 
     return issues
 
@@ -444,17 +455,19 @@ body {{
     background: #FFFEFA;
 }}
 .illus-area {{
-    height: 58%;
+    height: 68%;
     display: flex;
     justify-content: center;
     align-items: center;
     background: #F8F6F0;
-    border-bottom: 1px solid #E8E4D8;
+    padding: 8pt;
 }}
 .illus-area img {{
-    max-width: 95%;
-    max-height: 95%;
-    object-fit: contain;
+    max-width: 100%;
+    max-height: 100%;
+    width: 100%;
+    object-fit: cover;
+    border-radius: 4pt;
 }}
 .placeholder {{
     color: #BBB;
@@ -462,15 +475,15 @@ body {{
     text-align: center;
 }}
 .text-area {{
-    height: 35%;
+    height: 25%;
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 0 60pt;
+    padding: 0 40pt;
 }}
 .text-area p {{
-    font-size: 16pt;
-    line-height: 2;
+    font-size: 15pt;
+    line-height: 1.8;
     color: #333;
     text-align: center;
     margin: 0;
