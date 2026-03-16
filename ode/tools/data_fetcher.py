@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import hashlib
 import json
-import sys
+import logging
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 
 def fetch_web(query: str, max_results: int = 5) -> list[dict]:
@@ -13,7 +15,7 @@ def fetch_web(query: str, max_results: int = 5) -> list[dict]:
     try:
         import requests
     except ImportError:
-        print("requests not installed: pip install requests", file=sys.stderr)
+        logger.warning("requests not installed: pip install requests")
         return []
 
     # Use DuckDuckGo instant answer API (no key needed)
@@ -38,7 +40,7 @@ def fetch_web(query: str, max_results: int = 5) -> list[dict]:
 
         return results
     except Exception as e:
-        print(f"Web fetch error: {e}", file=sys.stderr)
+        logger.warning("Web fetch error: %s", e)
         return []
 
 

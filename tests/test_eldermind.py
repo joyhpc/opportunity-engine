@@ -84,18 +84,19 @@ class TestStore:
         result = load_opportunity("corrupted")
         assert result is None
 
-    def test_list_warns_on_malformed(self, isolated_test_root, capsys):
+    def test_list_warns_on_malformed(self, isolated_test_root, caplog):
         """FIX #18: malformed YAML should warn, not silently skip."""
+        import logging
         from ode.core.store import list_opportunities, _entity_dir
 
         dirpath = _entity_dir("opportunity")
         bad_file = dirpath / "bad.yaml"
         bad_file.write_text("", encoding="utf-8")
 
-        opps = list_opportunities()
+        with caplog.at_level(logging.WARNING, logger="ode.core.store"):
+            opps = list_opportunities()
         assert len(opps) == 0
-        captured = capsys.readouterr()
-        assert "Warning" in captured.err
+        assert "Skipped empty/corrupt" in caplog.text
 
 
 class TestScorer:

@@ -19,36 +19,34 @@ import json
 import sys
 from pathlib import Path
 
+from ode import service
+
 
 def cmd_create(args):
     """Create a new opportunity."""
-    from ode.core.models import Opportunity
-    from ode.core.store import save_opportunity
-
     keywords = [k.strip() for k in args.keywords.split(",")] if args.keywords else []
 
-    opp = Opportunity(
+    result = asyncio.run(service.create_opportunity(
         name=args.name,
         domain=args.domain or "",
-        description=args.description or "",
         keywords=keywords,
-    )
-    if args.id:
-        opp.id = args.id
+        description=args.description or "",
+        custom_id=args.id or "",
+    ))
 
-    path = save_opportunity(opp)
-    print(f"Created opportunity: {opp.id}")
-    print(f"  Name: {opp.name}")
-    print(f"  Domain: {opp.domain}")
-    print(f"  Keywords: {', '.join(keywords)}")
-    print(f"  Saved: {path}")
+    d = result["data"]
+    print(f"Created opportunity: {d['id']}")
+    print(f"  Name: {d['name']}")
+    print(f"  Domain: {d['domain']}")
+    print(f"  Keywords: {', '.join(d['keywords'])}")
+    print(f"  Saved: {d['path']}")
 
 
 def cmd_list(args):
     """List all opportunities."""
-    from ode.core.store import list_opportunities
+    result = asyncio.run(service.list_opportunities())
+    opps = result["data"]["opportunities"]
 
-    opps = list_opportunities()
     if not opps:
         print("No opportunities found.")
         return
@@ -56,132 +54,86 @@ def cmd_list(args):
     print(f"{'ID':<15} {'Name':<25} {'Stage':<10} {'Status':<10}")
     print("-" * 60)
     for opp in opps:
-        print(f"{opp.id:<15} {opp.name:<25} {opp.stage:<10} {opp.status:<10}")
+        print(f"{opp['id']:<15} {opp['name']:<25} {opp['stage']:<10} {opp['status']:<10}")
 
 
 def cmd_show(args):
     """Show opportunity details."""
-    from ode.core.store import find_opportunity_by_name, load_opportunity
-
-    opp = load_opportunity(args.opp_id) or find_opportunity_by_name(args.opp_id)
-    if not opp:
-        print(f"Opportunity not found: {args.opp_id}")
+    result = asyncio.run(service.show_opportunity(args.opp_id))
+    if not result["ok"]:
+        print(result["message"])
         sys.exit(1)
 
-    print(f"ID: {opp.id}")
-    print(f"Name: {opp.name}")
-    print(f"Domain: {opp.domain}")
-    print(f"Stage: {opp.stage}")
-    print(f"Status: {opp.status}")
-    print(f"Keywords: {', '.join(opp.keywords)}")
-    print(f"Created: {opp.created_at}")
-    print(f"Updated: {opp.updated_at}")
+    d = result["data"]
+    print(f"ID: {d['id']}")
+    print(f"Name: {d['name']}")
+    print(f"Domain: {d['domain']}")
+    print(f"Stage: {d['stage']}")
+    print(f"Status: {d['status']}")
+    print(f"Keywords: {', '.join(d['keywords'])}")
+    print(f"Created: {d['created_at']}")
+    print(f"Updated: {d['updated_at']}")
 
-    if opp.scores:
+    if d["scores"]:
         print(f"\nScores:")
-        for dim, val in opp.scores.items():
+        for dim, val in d["scores"].items():
             print(f"  {dim}: {val}")
 
-    if opp.market.get("tam", 0) > 0:
-        m = opp.market
+    market = d.get("market", {})
+    if market.get("tam", 0) > 0:
         print(f"\nMarket:")
-        print(f"  TAM: ${m['tam'] / 1e6:.0f}M")
-        print(f"  SAM: ${m['sam'] / 1e6:.0f}M")
-        print(f"  SOM: ${m['som'] / 1e6:.0f}M")
+        print(f"  TAM: ${market['tam'] / 1e6:.0f}M")
+        print(f"  SAM: ${market['sam'] / 1e6:.0f}M")
+        print(f"  SOM: ${market['som'] / 1e6:.0f}M")
 
-    if opp.financials.get("ltv", 0) > 0:
-        f = opp.financials
+    financials = d.get("financials", {})
+    if financials.get("ltv", 0) > 0:
         print(f"\nFinancials:")
-        print(f"  LTV: ${f.get('ltv', 0):.0f}")
-        print(f"  CAC: ${f.get('cac', 0):.0f}")
-        print(f"  LTV/CAC: {f.get('ltv_cac_ratio', 0):.1f}x")
+        print(f"  LTV: ${financials.get('ltv', 0):.0f}")
+        print(f"  CAC: ${financials.get('cac', 0):.0f}")
+        print(f"  LTV/CAC: {financials.get('ltv_cac_ratio', 0):.1f}x")
 
-    if opp.gate_log:
+    if d["gate_log"]:
         print(f"\nGate Log:")
-        for g in opp.gate_log:
+        for g in d["gate_log"]:
             print(f"  {g['gate']}: {g['verdict']} (score={g.get('score', 'N/A')}) at {g.get('ts', '')}")
 
-    if opp.signals:
-        print(f"\nSignals: {len(opp.signals)}")
+    if d["signal_count"]:
+        print(f"\nSignals: {d['signal_count']}")
 
 
 def cmd_scan(args):
     """Run signal scanning."""
-    from ode.core.store import find_opportunity_by_name, load_opportunity, save_opportunity
-    from ode.core.models import Opportunity
-    from ode.engine.workers import run_scan
-
     keywords = [k.strip() for k in args.keywords.split(",")] if args.keywords else []
 
-    # Find or create opportunity
-    opp = None
-    if args.opp_id:
-        opp = load_opportunity(args.opp_id) or find_opportunity_by_name(args.opp_id)
-
-    if not opp and keywords:
-        # Auto-create from keywords
-        name = args.name or keywords[0]
-        opp = Opportunity(
-            name=name,
-            domain=args.domain or "",
-            keywords=keywords,
-        )
-        save_opportunity(opp)
-        print(f"Created opportunity: {opp.id} ({opp.name})")
-
-    if not opp:
-        print("Provide --keywords or --opp-id")
-        sys.exit(1)
-
-    # Run scan
-    result = asyncio.run(run_scan(
-        opp.id,
+    result = asyncio.run(service.scan(
+        opp_id=args.opp_id or None,
         keywords=keywords or None,
         domain=args.domain or "",
         hn_top=args.hn_top or 0,
         subreddits=[s.strip() for s in args.reddit.split(",")] if args.reddit else None,
+        name=args.name,
     ))
 
-    print(f"\nScan result: {result.status}")
-    print(f"  Signals found: {result.scores.get('signal_count', 0)}")
-    if "gate" in result.scores:
-        g = result.scores["gate"]
+    if not result["ok"]:
+        print(result["message"])
+        sys.exit(1)
+
+    d = result["data"]
+    if d.get("auto_created"):
+        print(f"Created opportunity: {d['opp_id']}")
+
+    print(f"\nScan result: {d['status']}")
+    print(f"  Signals found: {d['signal_count']}")
+    if d.get("gate"):
+        g = d["gate"]
         print(f"  Gate: {g.get('verdict', 'N/A')} (score={g.get('score', 'N/A')})")
-    print(f"  Next action: {result.next_action}")
-    print(f"  {result.message}")
+    print(f"  Next action: {d['next_action']}")
+    print(f"  {d['message']}")
 
 
 def cmd_eval(args):
     """Evaluate an opportunity."""
-    from ode.core.store import find_opportunity_by_name, load_opportunity
-    from ode.engine.workers import run_eval
-
-    opp = load_opportunity(args.opp_id) or find_opportunity_by_name(args.opp_id)
-    if not opp:
-        print(f"Opportunity not found: {args.opp_id}")
-        sys.exit(1)
-
-    # Parse optional params
-    market_params = None
-    if args.tam:
-        market_params = {
-            "market_size": args.tam,
-            "segment_pct": args.segment_pct or 10,
-            "geo_pct": args.geo_pct or 30,
-        }
-
-    financial_params = None
-    if args.arpu:
-        financial_params = {
-            "arpu": args.arpu,
-            "cac": args.cac or 50,
-            "churn_rate": args.churn or 5.0,
-            "cogs_pct": args.cogs_pct or 20,
-            "monthly_new_users": args.monthly_users or 100,
-            "user_growth_rate": args.growth_rate or 10,
-            "monthly_opex": args.opex or 5000,
-        }
-
     # Parse scores if provided
     scores = None
     if args.scores:
@@ -191,106 +143,100 @@ def cmd_eval(args):
             print(f"Invalid JSON for --scores: {e}")
             sys.exit(1)
 
-    result = asyncio.run(run_eval(
-        opp.id,
+    result = asyncio.run(service.evaluate(
+        args.opp_id,
         depth=args.depth,
-        market_params=market_params,
-        financial_params=financial_params,
+        tam=args.tam,
+        segment_pct=args.segment_pct,
+        geo_pct=args.geo_pct,
+        arpu=args.arpu,
+        cac=args.cac,
+        churn=args.churn,
+        cogs_pct=args.cogs_pct,
+        monthly_users=args.monthly_users,
+        growth_rate=args.growth_rate,
+        opex=args.opex,
         scores=scores,
     ))
 
-    print(f"\nEval result ({args.depth}): {result.status}")
-    if result.data.get("gate"):
-        g = result.data["gate"]
+    if not result["ok"]:
+        print(result["message"])
+        sys.exit(1)
+
+    d = result["data"]
+    print(f"\nEval result ({d['depth']}): {d['status']}")
+    if d.get("gate"):
+        g = d["gate"]
         print(f"  Gate: {g.get('verdict', 'N/A')}")
-    if result.data.get("scoring"):
-        s = result.data["scoring"]
+    if d.get("scoring"):
+        s = d["scoring"]
         print(f"  Score: {s.get('percentage', 0):.0f}/100 — {s.get('verdict', '')}")
-    print(f"  Next action: {result.next_action}")
-    print(f"  {result.message}")
+    print(f"  Next action: {d['next_action']}")
+    print(f"  {d['message']}")
 
 
 def cmd_report(args):
     """Generate a report."""
-    from ode.core.store import find_opportunity_by_name, load_opportunity
-    from ode.engine.workers import run_report
+    result = asyncio.run(service.generate_report(args.opp_id, stage=args.stage))
 
-    opp = load_opportunity(args.opp_id) or find_opportunity_by_name(args.opp_id)
-    if not opp:
-        print(f"Opportunity not found: {args.opp_id}")
+    if not result["ok"]:
+        print(result["message"])
         sys.exit(1)
 
-    result = asyncio.run(run_report(opp.id, stage=args.stage))
-
-    if result.status == "ok":
-        report_path = result.data.get("report_path", "")
-        print(f"Report generated: {report_path}")
-        if args.print:
-            print()
-            print(result.data.get("report_text", ""))
-    else:
-        print(f"Report failed: {result.message}")
+    d = result["data"]
+    print(f"Report generated: {d['report_path']}")
+    if args.print:
+        print()
+        print(d.get("report_text", ""))
 
 
 def cmd_status(args):
     """Show ODE status."""
-    from ode.core.store import list_opportunities
-    from ode.data.cache import Cache
-
-    opps = list_opportunities()
-    active = [o for o in opps if o.status == "active"]
-    killed = [o for o in opps if o.status == "killed"]
+    result = asyncio.run(service.get_status())
+    d = result["data"]
 
     print("ODE Status")
     print("=" * 40)
-    print(f"Total opportunities: {len(opps)}")
-    print(f"  Active: {len(active)}")
-    print(f"  Killed: {len(killed)}")
+    print(f"Total opportunities: {d['total']}")
+    print(f"  Active: {d['active_count']}")
+    print(f"  Killed: {d['killed_count']}")
 
-    if active:
+    if d["active"]:
         print(f"\nActive opportunities:")
-        for o in active:
-            print(f"  [{o.stage}] {o.name} ({o.id})")
+        for o in d["active"]:
+            print(f"  [{o['stage']}] {o['name']} ({o['id']})")
 
-    try:
-        cache = Cache()
-        stats = cache.stats()
-        print(f"\nCache: {stats['valid']} entries ({stats['expired']} expired)")
-    except Exception:
-        pass
+    cache = d.get("cache", {})
+    if cache:
+        print(f"\nCache: {cache['valid']} entries ({cache['expired']} expired)")
 
 
 def cmd_portfolio(args):
     """Show portfolio view."""
-    from ode.engine.portfolio import get_portfolio_summary, format_portfolio
-
-    summaries = get_portfolio_summary()
-    print(format_portfolio(summaries))
+    result = asyncio.run(service.get_portfolio())
+    print(result["data"]["formatted"])
 
 
 def cmd_compare(args):
     """Compare opportunities."""
-    from ode.engine.portfolio import compare_opportunities
-
     ids = [i.strip() for i in args.ids.split(",")]
-    print(compare_opportunities(ids))
+    result = asyncio.run(service.compare_opportunities(ids))
+    print(result["data"]["formatted"])
 
 
 def cmd_explore(args):
     """Open-ended opportunity exploration — no idea needed."""
-    from ode.heuristics.explore import explore, format_exploration_report
-
     subreddits = [s.strip() for s in args.reddit.split(",")] if args.reddit else None
     keywords = [k.strip() for k in args.keywords.split(",")] if args.keywords else None
 
     print("Scanning signals from HN, Reddit, and Trends...", file=sys.stderr)
-    result = explore(
+    result = asyncio.run(service.explore_signals(
         hn_top=args.hn_top or 30,
         subreddits=subreddits,
         keywords=keywords,
-    )
+    ))
 
-    report = format_exploration_report(result)
+    report = result["data"]["formatted"]
     print(report)
 
     if args.output:
@@ -300,49 +246,26 @@ def cmd_explore(args):
 
 def cmd_insights(args):
     """Generate insights (contradictions + blind spots) for an opportunity."""
-    from ode.core.store import find_opportunity_by_name, load_opportunity, list_signals
-    from ode.heuristics.synthesize import synthesize, format_synthesis_report
-    from ode.heuristics.reframe import generate_reframe, format_reframe_report
+    from ode.heuristics.synthesize import format_synthesis_report
+    from ode.heuristics.reframe import format_reframe_report
+    from ode.heuristics.bridge import format_quick_assess_report
 
-    opp = load_opportunity(args.opp_id) or find_opportunity_by_name(args.opp_id)
-    if not opp:
-        print(f"Opportunity not found: {args.opp_id}")
+    result = asyncio.run(service.get_insights(args.opp_id))
+    if not result["ok"]:
+        print(result["message"])
         sys.exit(1)
 
-    # Build opp_data dict for synthesis
-    signals = list_signals(opp.id)
-    opp_data = {
-        "scores": opp.scores,
-        "market": opp.market,
-        "financials": opp.financials,
-        "regulatory": opp.regulatory,
-        "signals": [s.to_dict() for s in signals],
-        "gate_log": opp.gate_log,
-        "stage": opp.stage,
-        "domain": opp.domain,
-    }
+    d = result["data"]
 
-    # Run synthesis
-    synthesis = synthesize(opp_data)
-    print(format_synthesis_report(synthesis))
+    print(format_synthesis_report(d["synthesis"]))
 
-    # Run reframe if score is borderline
-    weighted_pct = opp.scores.get("_weighted_pct", 0) if opp.scores else 0
-    if weighted_pct and weighted_pct < 70:
-        verdict = "KILL" if weighted_pct < 50 else "MAYBE"
-        # Find weakest dimension
-        weakest = ""
-        dim_scores = {k: v for k, v in opp.scores.items() if k != "_weighted_pct"}
-        if dim_scores:
-            weakest = min(dim_scores, key=lambda k: dim_scores[k])
-
-        reframe = generate_reframe(
-            scores=opp.scores,
-            verdict=verdict,
-            weakest_dimension=weakest,
-        )
+    if d.get("quick_assess"):
         print()
-        print(format_reframe_report(reframe))
+        print(format_quick_assess_report(d["quick_assess"]))
+
+    if d.get("reframe"):
+        print()
+        print(format_reframe_report(d["reframe"]))
 
 
 def main():

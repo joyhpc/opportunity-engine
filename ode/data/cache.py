@@ -13,7 +13,8 @@ class Cache:
 
     def __init__(self, db_path: str | Path | None = None):
         if db_path is None:
-            db_path = Path.home() / "opportunity-engine" / "data" / "cache.db"
+            from ..core.store import _project_root
+            db_path = _project_root() / "data" / "cache.db"
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_db()

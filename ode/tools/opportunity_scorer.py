@@ -163,6 +163,7 @@ class ScoringResult:
             "strongest_dimension": self.strongest_dimension,
             "redline_violations": self.redline_violations,
             "dimension_scores": self.dimension_scores,
+            "details": self.details,
         }
 
 

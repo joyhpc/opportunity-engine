@@ -8,6 +8,38 @@ from __future__ import annotations
 
 
 # ---------------------------------------------------------------------------
+# Domain adjacency map for lateral moves
+# ---------------------------------------------------------------------------
+
+DOMAIN_ADJACENCY = {
+    "education": ["health", "saas", "creator"],
+    "health": ["education", "climate", "saas"],
+    "fintech": ["saas", "ecommerce"],
+    "devtools": ["saas", "ai_ml", "creator"],
+    "ai_ml": ["devtools", "saas", "education"],
+    "hardware": ["robotics", "climate", "devtools"],
+    "robotics": ["hardware", "climate", "ai_ml"],
+    "creator": ["education", "saas", "ecommerce"],
+    "saas": ["devtools", "fintech", "education"],
+    "ecommerce": ["saas", "fintech", "creator"],
+    "climate": ["hardware", "health", "saas"],
+}
+
+# ---------------------------------------------------------------------------
+# Inversion map — flip the demand pattern perspective
+# ---------------------------------------------------------------------------
+
+INVERSION_MAP = {
+    "decision_proxy": "Don't help buyers choose — help sellers understand what buyers want",
+    "comparison":     "Don't help users compare — help products differentiate their positioning",
+    "capability_gap": "Don't teach users how to do it — teach creators how to teach",
+    "avoidance":      "Don't help buyers avoid bad products — help sellers fix quality",
+    "curation":       "Don't curate for consumers — help producers get curated",
+    "info_gap":       "Don't surface hidden info for readers — help writers identify what's missing",
+}
+
+
+# ---------------------------------------------------------------------------
 # Reframe strategies per weak dimension
 # ---------------------------------------------------------------------------
 
@@ -149,10 +181,95 @@ REFRAME_STRATEGIES = {
 }
 
 
+def generate_lateral_moves(domain: str,
+                           demand_pattern: str = "",
+                           weakest_dimension: str = "") -> list[dict]:
+    """Suggest opportunities in adjacent domains with the same need pattern.
+
+    When the current path is blocked (MAYBE/KILL), lateral moves
+    propose the same demand pattern in a neighboring domain.
+    """
+    adjacent = DOMAIN_ADJACENCY.get(domain, [])
+    if not adjacent:
+        return []
+
+    moves = []
+    for adj_domain in adjacent:
+        move = {
+            "from_domain": domain,
+            "to_domain": adj_domain,
+            "strategy": f"Apply {domain} insight to {adj_domain}",
+            "description": (
+                f"Your signal analysis in {domain} revealed demand patterns "
+                f"that may exist in {adj_domain} with less competition."
+            ),
+        }
+        if demand_pattern:
+            move["demand_pattern"] = demand_pattern
+            move["description"] = (
+                f"The '{demand_pattern.replace('_', ' ')}' need you found in {domain} "
+                f"likely also exists in {adj_domain} — but fewer people are serving it there."
+            )
+        if weakest_dimension:
+            move["rationale"] = (
+                f"Your weakest area ({weakest_dimension}) may score better "
+                f"in {adj_domain} due to different market dynamics."
+            )
+        moves.append(move)
+
+    return moves
+
+
+def generate_inversions(domain: str,
+                        demand_pattern: str = "") -> list[dict]:
+    """Generate 'flip the perspective' suggestions.
+
+    Instead of serving the obvious customer, serve the other side.
+    """
+    inversions = []
+
+    if demand_pattern and demand_pattern in INVERSION_MAP:
+        inversions.append({
+            "pattern": demand_pattern,
+            "inversion": INVERSION_MAP[demand_pattern],
+            "domain": domain,
+            "description": (
+                f"In {domain}, everyone is building for the demand side "
+                f"({demand_pattern.replace('_', ' ')}). Flip it: "
+                f"{INVERSION_MAP[demand_pattern]}."
+            ),
+            "actions": [
+                f"Interview 3 {domain} suppliers/creators about their biggest blind spot",
+                "Check if B2B version of this need has higher willingness to pay",
+                "Prototype for the supply side using your existing signal data",
+            ],
+        })
+    else:
+        # Generic inversions when no demand pattern is known
+        for pattern, inv in list(INVERSION_MAP.items())[:2]:
+            inversions.append({
+                "pattern": pattern,
+                "inversion": inv,
+                "domain": domain,
+                "description": (
+                    f"Consider flipping the perspective: {inv}. "
+                    f"The supply side in {domain} is often underserved."
+                ),
+                "actions": [
+                    "Research supply-side pain points in this domain",
+                    "Check if B2B pricing is viable for this flip",
+                ],
+            })
+
+    return inversions
+
+
 def generate_reframe(scores: dict,
                      verdict: str,
                      weakest_dimension: str = "",
-                     scoring_details: list | None = None) -> dict:
+                     scoring_details: list | None = None,
+                     domain: str = "",
+                     demand_pattern: str = "") -> dict:
     """Generate reframing suggestions based on scoring results.
 
     Args:
@@ -160,8 +277,10 @@ def generate_reframe(scores: dict,
         verdict: "MAYBE" or "KILL"
         weakest_dimension: name of the weakest scoring dimension
         scoring_details: list of {dimension, criterion, score} from scorer
+        domain: opportunity domain (e.g., "health", "devtools")
+        demand_pattern: detected demand pattern (e.g., "decision_proxy")
 
-    Returns a dict with reframe suggestions.
+    Returns a dict with reframe suggestions, lateral moves, and inversions.
     """
     suggestions = []
 
@@ -219,11 +338,23 @@ def generate_reframe(scores: dict,
             "then re-score."
         )
 
+    # Lateral moves and inversions (when domain/demand_pattern available)
+    lateral_moves = []
+    inversions = []
+    if domain:
+        lateral_moves = generate_lateral_moves(
+            domain, demand_pattern=demand_pattern,
+            weakest_dimension=weakest_dimension,
+        )
+        inversions = generate_inversions(domain, demand_pattern=demand_pattern)
+
     return {
         "verdict": verdict,
         "overall": overall,
         "suggestions": suggestions,
         "weakest_dimension": weakest_dimension,
+        "lateral_moves": lateral_moves,
+        "inversions": inversions,
     }
 
 
@@ -255,5 +386,31 @@ def format_reframe_report(reframe: dict) -> str:
 
     if not reframe["suggestions"]:
         lines.append("No specific reframe suggestions — the weak scores are in areas that need direct data (interviews, MVT).")
+
+    # Lateral moves
+    lateral = reframe.get("lateral_moves", [])
+    if lateral:
+        lines.extend(["", "## Lateral Moves (Adjacent Domains)", ""])
+        for move in lateral[:3]:  # Show top 3
+            lines.append(f"- **{move['from_domain']} → {move['to_domain']}**: {move['description']}")
+            if move.get("rationale"):
+                lines.append(f"  _{move['rationale']}_")
+        lines.append("")
+
+    # Inversions
+    inversions = reframe.get("inversions", [])
+    if inversions:
+        lines.extend(["## Perspective Inversions", ""])
+        for inv in inversions:
+            lines.extend([
+                f"**{inv['pattern'].replace('_', ' ').title()}** → {inv['inversion']}",
+                "",
+                inv["description"],
+                "",
+            ])
+            if inv.get("actions"):
+                for action in inv["actions"]:
+                    lines.append(f"  - {action}")
+            lines.append("")
 
     return "\n".join(lines)

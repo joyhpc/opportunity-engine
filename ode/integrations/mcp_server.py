@@ -5,6 +5,10 @@ Phase 3 implementation. Follows hardware-copilot's TOOL_REGISTRARS pattern.
 
 from __future__ import annotations
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 TOOL_REGISTRARS = (
     # Will be populated in Phase 3
@@ -26,7 +30,7 @@ def create_mcp_server():
     try:
         from mcp.server.fastmcp import FastMCP
     except ImportError:
-        print("MCP not installed: pip install mcp")
+        logger.warning("MCP not installed: pip install mcp")
         return None
 
     mcp = FastMCP("opportunity-engine")

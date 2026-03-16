@@ -101,6 +101,29 @@ class TestExplore:
         assert "Ai Ml" in text
         assert "coding" in text
 
+    def test_explore_pure_computation(self):
+        """explore(signals) should work as pure computation without I/O."""
+        from ode.heuristics.explore import explore
+
+        signals = [
+            {"title": "AI coding assistant", "keyword": "ai", "strength": "强", "source": "HN", "momentum": 50},
+            {"title": "LLM fine-tuning guide", "keyword": "llm", "strength": "中", "source": "Reddit", "momentum": 30},
+            {"title": "GPT agent tutorial", "keyword": "gpt", "strength": "强", "source": "HN", "momentum": 40},
+        ]
+        result = explore(signals)
+        assert result["status"] == "ok"
+        assert result["total_signals"] == 3
+        assert result["cluster_count"] >= 1
+        assert len(result["hypotheses"]) >= 1
+
+    def test_explore_empty_signals(self):
+        """explore([]) should return no_signals status."""
+        from ode.heuristics.explore import explore
+
+        result = explore([])
+        assert result["status"] == "no_signals"
+        assert result["hypotheses"] == []
+
 
 # ---------------------------------------------------------------------------
 # bridge
@@ -377,3 +400,307 @@ class TestSynthesize:
         text = format_synthesis_report(synthesis)
         assert "Opportunity Insights" in text
         assert "Contradictions" in text
+
+
+# ---------------------------------------------------------------------------
+# NEW: demand pattern detection (explore)
+# ---------------------------------------------------------------------------
+
+class TestDemandPatterns:
+    def test_classify_decision_proxy(self):
+        from ode.heuristics.explore import classify_demand_pattern
+
+        sig = {"title": "Help me choose between X and Y", "keyword": "choose"}
+        assert classify_demand_pattern(sig) == "decision_proxy"
+
+    def test_classify_comparison(self):
+        from ode.heuristics.explore import classify_demand_pattern
+
+        sig = {"title": "Product A vs Product B", "keyword": "comparison"}
+        assert classify_demand_pattern(sig) == "comparison"
+
+    def test_classify_capability_gap(self):
+        from ode.heuristics.explore import classify_demand_pattern
+
+        sig = {"title": "How to build a REST API tutorial", "keyword": "tutorial"}
+        assert classify_demand_pattern(sig) == "capability_gap"
+
+    def test_classify_unclassified(self):
+        from ode.heuristics.explore import classify_demand_pattern
+
+        sig = {"title": "Random news about weather", "keyword": "weather"}
+        assert classify_demand_pattern(sig) == "unclassified"
+
+    def test_cluster_by_demand(self):
+        from ode.heuristics.explore import cluster_by_demand
+
+        signals = [
+            {"title": "Which one should I buy for work", "keyword": "laptop"},
+            {"title": "Help me choose picking between two options", "keyword": "options"},
+            {"title": "How to set up a home server tutorial", "keyword": "server"},
+        ]
+        clusters = cluster_by_demand(signals)
+        assert "decision_proxy" in clusters
+        assert len(clusters["decision_proxy"]) == 2
+
+    def test_build_demand_matrix(self):
+        from ode.heuristics.explore import build_demand_matrix
+
+        signals = [
+            {"title": "AI tutorial how to fine-tune LLM", "keyword": "ai"},
+            {"title": "AI guide getting started with GPT", "keyword": "gpt"},
+            {"title": "Health app vs clinic comparison", "keyword": "health"},
+        ]
+        result = build_demand_matrix(signals)
+        assert "matrix" in result
+        assert "domain_totals" in result
+        assert "pattern_totals" in result
+        assert "hotspots" in result
+        # AI signals should appear in matrix
+        assert "ai_ml" in result["matrix"]
+
+    def test_hypotheses_include_dominant_need(self):
+        from ode.heuristics.explore import (
+            cluster_signals, generate_hypotheses,
+            cluster_by_demand, build_demand_matrix,
+        )
+
+        signals = [
+            {"title": "How to build AI agent tutorial", "keyword": "ai", "strength": "强", "source": "HN", "momentum": 50},
+            {"title": "Getting started with LLM guide", "keyword": "llm", "strength": "中", "source": "Reddit", "momentum": 30},
+            {"title": "AI copilot how to use", "keyword": "copilot", "strength": "中", "source": "HN", "momentum": 20},
+        ]
+        clusters = cluster_signals(signals)
+        dc = cluster_by_demand(signals)
+        dm = build_demand_matrix(signals)
+        hypotheses = generate_hypotheses(clusters, demand_clusters=dc, demand_matrix=dm)
+
+        assert len(hypotheses) >= 1
+        h = hypotheses[0]
+        assert "dominant_need" in h
+        # These signals all have "how to"/"tutorial"/"guide"/"getting started"
+        assert h["dominant_need"] == "capability_gap"
+
+    def test_format_report_includes_demand_landscape(self):
+        from ode.heuristics.explore import format_exploration_report
+
+        result = {
+            "status": "ok",
+            "total_signals": 5,
+            "cluster_count": 2,
+            "clusters": {"ai_ml": 3, "emerging": 2},
+            "demand_clusters": {"capability_gap": 3, "unclassified": 2},
+            "demand_matrix": {
+                "matrix": {"ai_ml": {"capability_gap": 3}},
+                "domain_totals": {"ai_ml": 3, "emerging": 2},
+                "pattern_totals": {"capability_gap": 3, "unclassified": 2},
+                "hotspots": [("ai_ml", "capability_gap", 3)],
+            },
+            "hypotheses": [],
+        }
+        text = format_exploration_report(result)
+        assert "Demand Landscape" in text
+        assert "Domain x Need Matrix" in text
+        assert "Hotspots" in text
+
+
+# ---------------------------------------------------------------------------
+# NEW: quick_assess (bridge)
+# ---------------------------------------------------------------------------
+
+class TestQuickAssess:
+    def test_quick_assess_software(self):
+        from ode.heuristics.bridge import quick_assess
+
+        signals = [
+            {"title": "SaaS tool for team pricing", "keyword": "saas", "strength": "强"},
+            {"title": "Frustrated with current workflow", "keyword": "workflow", "strength": "中"},
+        ]
+        result = quick_assess(signals, domain="saas")
+        assert result["can_you_do_it"] == "yes"
+        assert result["existing_revenue_proof"] == "yes"  # "pricing" in text
+        assert result["days_to_first_test"] == "<7"
+        assert result["user_urgency"] == "nice_to_have"  # "frustrated" detected
+
+    def test_quick_assess_hardware(self):
+        from ode.heuristics.bridge import quick_assess
+
+        signals = [
+            {"title": "FPGA board review", "keyword": "fpga"},
+        ]
+        result = quick_assess(signals, domain="hardware")
+        assert result["days_to_first_test"] == "<90"
+
+    def test_quick_assess_regulated(self):
+        from ode.heuristics.bridge import quick_assess
+
+        signals = [
+            {"title": "Medical clinic app", "keyword": "health"},
+        ]
+        result = quick_assess(signals, domain="health")
+        assert result["can_you_do_it"] == "need_partner"
+
+    def test_format_quick_assess_report(self):
+        from ode.heuristics.bridge import quick_assess, format_quick_assess_report
+
+        signals = [{"title": "AI tool pricing launched", "keyword": "ai"}]
+        assessment = quick_assess(signals, domain="ai_ml")
+        text = format_quick_assess_report(assessment)
+        assert "Quick Assessment" in text
+        assert "Can you build this?" in text
+
+
+# ---------------------------------------------------------------------------
+# NEW: lateral moves + inversions (reframe)
+# ---------------------------------------------------------------------------
+
+class TestLateralMovesAndInversions:
+    def test_generate_lateral_moves(self):
+        from ode.heuristics.reframe import generate_lateral_moves
+
+        moves = generate_lateral_moves("education", demand_pattern="capability_gap")
+        assert len(moves) > 0
+        domains = {m["to_domain"] for m in moves}
+        assert "health" in domains or "saas" in domains
+
+    def test_generate_lateral_moves_with_weakest(self):
+        from ode.heuristics.reframe import generate_lateral_moves
+
+        moves = generate_lateral_moves(
+            "devtools",
+            demand_pattern="comparison",
+            weakest_dimension="Market Attractiveness",
+        )
+        assert len(moves) > 0
+        assert any("rationale" in m for m in moves)
+
+    def test_generate_inversions_with_pattern(self):
+        from ode.heuristics.reframe import generate_inversions
+
+        inversions = generate_inversions("health", demand_pattern="decision_proxy")
+        assert len(inversions) == 1
+        assert "buyers" in inversions[0]["inversion"].lower() or "sellers" in inversions[0]["inversion"].lower()
+
+    def test_generate_inversions_without_pattern(self):
+        from ode.heuristics.reframe import generate_inversions
+
+        inversions = generate_inversions("health", demand_pattern="")
+        assert len(inversions) >= 1  # generic inversions
+
+    def test_reframe_includes_lateral_and_inversions(self):
+        from ode.heuristics.reframe import generate_reframe
+
+        result = generate_reframe(
+            scores={"tam_size": 3},
+            verdict="MAYBE",
+            weakest_dimension="Market Attractiveness",
+            domain="education",
+            demand_pattern="capability_gap",
+        )
+        assert "lateral_moves" in result
+        assert "inversions" in result
+        assert len(result["lateral_moves"]) > 0
+        assert len(result["inversions"]) > 0
+
+    def test_format_reframe_with_lateral_inversions(self):
+        from ode.heuristics.reframe import generate_reframe, format_reframe_report
+
+        result = generate_reframe(
+            scores={},
+            verdict="KILL",
+            weakest_dimension="Economic Viability",
+            domain="fintech",
+            demand_pattern="comparison",
+        )
+        text = format_reframe_report(result)
+        assert "Lateral Moves" in text
+        assert "Perspective Inversions" in text
+
+
+# ---------------------------------------------------------------------------
+# NEW: ScoringResult.to_dict includes details
+# ---------------------------------------------------------------------------
+
+class TestScoringResultDetails:
+    def test_to_dict_includes_details(self):
+        from ode.tools.opportunity_scorer import score_opportunity
+
+        scores = {"tam_size": 7, "growth": 5, "timing": 6,
+                  "intensity": 5, "barrier": 6, "moat_potential": 4,
+                  "skill_match": 7, "resource_need": 8, "time_to_market": 6,
+                  "ltv_cac": 5, "margin": 6, "payback": 5,
+                  "pain_evidence": 4, "willingness_to_pay": 3, "mvt_result": 2,
+                  "system_rethink": 5, "data_loop": 4, "compound_advantage": 5}
+        result = score_opportunity("Test Opp", scores)
+        d = result.to_dict()
+        assert "details" in d
+        assert len(d["details"]) == 18  # 18 criteria across 6 dimensions
+        assert d["details"][0]["dimension"] == "Market Attractiveness"
+
+
+# ---------------------------------------------------------------------------
+# Regression: quality fixes
+# ---------------------------------------------------------------------------
+
+class TestQualityFixes:
+    def test_vs_false_positive_in_demand_pattern(self):
+        """'vs' should not match inside words like 'canvas' or 'rivals'."""
+        from ode.heuristics.explore import classify_demand_pattern
+
+        # "canvas" contains "vs" but should NOT match comparison
+        sig = {"title": "Canvas drawing tool for designers", "keyword": "canvas"}
+        assert classify_demand_pattern(sig) != "comparison"
+
+        # Actual " vs " should match
+        sig2 = {"title": "Figma vs Sketch for UI design", "keyword": "design"}
+        assert classify_demand_pattern(sig2) == "comparison"
+
+    def test_classify_domain_shared_function(self):
+        """_classify_domain should give same results as cluster_signals."""
+        from ode.heuristics.explore import _classify_domain, cluster_signals
+
+        signals = [
+            {"title": "AI model beats GPT", "keyword": "ai"},
+            {"title": "Health clinic app", "keyword": "health"},
+            {"title": "Random xyz topic", "keyword": "xyz"},
+        ]
+        # _classify_domain should match cluster_signals assignments
+        clusters = cluster_signals(signals)
+        for sig in signals:
+            domain, _ = _classify_domain(sig)
+            assert sig in clusters[domain]
+
+    def test_demand_landscape_unclassified_deemphasized(self):
+        """Unclassified signals use ░ not █ in demand landscape."""
+        from ode.heuristics.explore import format_exploration_report
+
+        result = {
+            "status": "ok",
+            "total_signals": 5,
+            "cluster_count": 1,
+            "clusters": {"emerging": 5},
+            "demand_clusters": {"unclassified": 4, "comparison": 1},
+            "demand_matrix": {"matrix": {}, "domain_totals": {},
+                              "pattern_totals": {}, "hotspots": []},
+            "hypotheses": [],
+        }
+        text = format_exploration_report(result)
+        assert "░" in text  # unclassified uses light bar
+        assert "Comparison" in text
+
+    def test_quick_assess_vs_false_positive(self):
+        """'vs' in quick_assess should not match inside words."""
+        from ode.heuristics.bridge import quick_assess
+
+        signals = [{"title": "Canvas tool for visual design", "keyword": "canvas"}]
+        result = quick_assess(signals, domain="devtools")
+        assert result["competition_density"] == "empty"  # "canvas" should not trigger
+
+    def test_quick_assess_market_data_competitors(self):
+        """market_data.competitors should boost competition_density."""
+        from ode.heuristics.bridge import quick_assess
+
+        signals = [{"title": "Simple note app", "keyword": "notes"}]
+        result = quick_assess(signals, domain="saas",
+                              market_data={"competitors": 5})
+        assert result["competition_density"] in ("crowded", "dominated")

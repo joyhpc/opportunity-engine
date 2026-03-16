@@ -68,6 +68,24 @@ def _tokenize_signal(signal: dict) -> list[str]:
     return re.findall(r'[a-z\u4e00-\u9fff]{2,}', text)
 
 
+def _classify_domain(signal: dict) -> tuple[str, int]:
+    """Classify a signal into the best-matching domain.
+
+    Returns (domain, overlap_count). Falls back to ("emerging", 0).
+    """
+    tokens = set(_tokenize_signal(signal))
+    best_domain = "emerging"
+    best_overlap = 0
+
+    for domain, seeds in DOMAIN_SEEDS.items():
+        overlap = len(tokens & set(seeds))
+        if overlap > best_overlap:
+            best_overlap = overlap
+            best_domain = domain
+
+    return best_domain, best_overlap
+
+
 def cluster_signals(signals: list[dict]) -> dict[str, list[dict]]:
     """Cluster signals into domain themes using seed-word matching.
 
@@ -77,23 +95,104 @@ def cluster_signals(signals: list[dict]) -> dict[str, list[dict]]:
     clusters: dict[str, list[dict]] = defaultdict(list)
 
     for sig in signals:
-        tokens = set(_tokenize_signal(sig))
-        matched_domains = []
-
-        for domain, seeds in DOMAIN_SEEDS.items():
-            overlap = tokens & set(seeds)
-            if overlap:
-                matched_domains.append((domain, len(overlap)))
-
-        if matched_domains:
-            # Assign to best-matching domain
-            best = max(matched_domains, key=lambda x: x[1])[0]
-            clusters[best].append(sig)
-        else:
-            clusters["emerging"].append(sig)
+        domain, _ = _classify_domain(sig)
+        clusters[domain].append(sig)
 
     # Sort by cluster size
     return dict(sorted(clusters.items(), key=lambda x: len(x[1]), reverse=True))
+
+
+# ---------------------------------------------------------------------------
+# Demand-pattern clustering (second dimension beyond domain)
+# ---------------------------------------------------------------------------
+
+DEMAND_PATTERNS = {
+    "decision_proxy": ["help me choose", "which one", "best for", "should i buy",
+                       "recommend me", "picking between"],
+    "comparison":     [" vs ", "versus", "compared to", "better than",
+                       "worth it", "difference between"],
+    "capability_gap": ["how to", "how do i", "help with", "tutorial",
+                       "guide", "getting started", "need help"],
+    "avoidance":      ["scam", "waste", "regret", "avoid", "don't buy",
+                       "not worth", "terrible", "warning", "ripoff"],
+    "info_gap":       ["wish i knew", "didn't know", "nobody tells",
+                       "hidden", "secret", "underrated", "overlooked"],
+    "curation":       ["recommend", "best", "suggest", "top", "favorite",
+                       "curated", "list of"],
+}
+
+
+def classify_demand_pattern(signal: dict) -> str:
+    """Classify a single signal into a demand pattern.
+
+    Returns the best-matching pattern key, or "unclassified".
+    """
+    # Pad with spaces so boundary-aware patterns like " vs " work at edges
+    text = f" {signal.get('title', '')} {signal.get('keyword', '')} ".lower()
+
+    best_pattern = "unclassified"
+    best_count = 0
+
+    for pattern, phrases in DEMAND_PATTERNS.items():
+        count = sum(1 for p in phrases if p in text)
+        if count > best_count:
+            best_count = count
+            best_pattern = pattern
+
+    return best_pattern
+
+
+def cluster_by_demand(signals: list[dict]) -> dict[str, list[dict]]:
+    """Cluster signals by demand pattern.
+
+    Returns {pattern: [signals]} sorted by cluster size descending.
+    """
+    clusters: dict[str, list[dict]] = defaultdict(list)
+
+    for sig in signals:
+        pattern = classify_demand_pattern(sig)
+        clusters[pattern].append(sig)
+
+    return dict(sorted(clusters.items(), key=lambda x: len(x[1]), reverse=True))
+
+
+def build_demand_matrix(signals: list[dict]) -> dict:
+    """Build a domain x demand-pattern matrix.
+
+    Returns:
+        {
+            "matrix": {domain: {pattern: count}},
+            "domain_totals": {domain: count},
+            "pattern_totals": {pattern: count},
+            "hotspots": [(domain, pattern, count), ...],  # sorted desc
+        }
+    """
+    matrix: dict[str, Counter] = defaultdict(Counter)
+    domain_totals: Counter = Counter()
+    pattern_totals: Counter = Counter()
+
+    for sig in signals:
+        domain, _ = _classify_domain(sig)
+        pattern = classify_demand_pattern(sig)
+
+        matrix[domain][pattern] += 1
+        domain_totals[domain] += 1
+        pattern_totals[pattern] += 1
+
+    # Find hotspots (cells with count >= 2)
+    hotspots = []
+    for domain, patterns in matrix.items():
+        for pattern, count in patterns.items():
+            if count >= 2:
+                hotspots.append((domain, pattern, count))
+    hotspots.sort(key=lambda x: x[2], reverse=True)
+
+    return {
+        "matrix": {d: dict(p) for d, p in matrix.items()},
+        "domain_totals": dict(domain_totals),
+        "pattern_totals": dict(pattern_totals),
+        "hotspots": hotspots,
+    }
 
 
 def _extract_themes(cluster: list[dict], top_n: int = 5) -> list[str]:
@@ -117,13 +216,16 @@ def _extract_themes(cluster: list[dict], top_n: int = 5) -> list[str]:
 # ---------------------------------------------------------------------------
 
 def generate_hypotheses(clusters: dict[str, list[dict]],
-                        min_signals: int = 2) -> list[dict]:
+                        min_signals: int = 2,
+                        demand_clusters: dict[str, list[dict]] | None = None,
+                        demand_matrix: dict | None = None) -> list[dict]:
     """Generate opportunity hypotheses from signal clusters.
 
     Each hypothesis captures:
     - domain, themes, signal_count, strength profile
     - a human-readable hypothesis statement
     - suggested next steps
+    - (optional) dominant demand need and need-aware next steps
     """
     hypotheses = []
 
@@ -158,7 +260,23 @@ def generate_hypotheses(clusters: dict[str, list[dict]],
         else:
             hypothesis = f"{domain.replace('_', ' ').title()} opportunity: [{theme_str}] — {len(signals)} signals from {len(sources)} source(s)"
 
+        # Determine dominant demand pattern for this cluster
+        dominant_need = ""
+        if demand_matrix and demand_matrix.get("matrix", {}).get(domain):
+            pattern_counts = demand_matrix["matrix"][domain]
+            if pattern_counts:
+                dominant_need = max(pattern_counts, key=pattern_counts.get)
+
         # Suggest next steps based on confidence
+        need_aware_steps = {
+            "decision_proxy": "Build a recommendation/comparison tool for this niche",
+            "comparison": "Create a structured comparison framework users can trust",
+            "capability_gap": "Ship a tutorial or getting-started guide as lead magnet",
+            "avoidance": "Build a trust/verification layer (reviews, certifications)",
+            "info_gap": "Curate the hidden knowledge into an accessible resource",
+            "curation": "Start a curated list or newsletter in this space",
+        }
+
         if confidence >= 7:
             next_steps = [
                 f"Create opportunity: ode create --name \"{themes[0]}\" --domain \"{domain}\" --keywords \"{','.join(themes[:3])}\"",
@@ -177,6 +295,10 @@ def generate_hypotheses(clusters: dict[str, list[dict]],
                 "Set up a Google Alert for key terms",
             ]
 
+        # Add demand-aware step if available
+        if dominant_need and dominant_need in need_aware_steps:
+            next_steps.insert(0, f"[{dominant_need}] {need_aware_steps[dominant_need]}")
+
         hypotheses.append({
             "domain": domain,
             "themes": themes,
@@ -187,6 +309,7 @@ def generate_hypotheses(clusters: dict[str, list[dict]],
             "avg_momentum": round(avg_momentum, 1),
             "confidence": round(confidence, 1),
             "next_steps": next_steps,
+            "dominant_need": dominant_need,
             "top_signals": sorted(signals,
                 key=lambda s: {"强": 0, "中": 1, "弱": 2}.get(s.get("strength", "弱"), 3))[:5],
         })
@@ -200,29 +323,23 @@ def generate_hypotheses(clusters: dict[str, list[dict]],
 # Main exploration flow
 # ---------------------------------------------------------------------------
 
-def explore(hn_top: int = 30,
+_DEFAULT_SUBS = [
+    "startup", "SaaS", "Entrepreneur", "sideproject",
+    "artificial", "MachineLearning",
+]
+
+
+def explore(signals: list[dict],
+            hn_top: int = 30,
             subreddits: list[str] | None = None,
             keywords: list[str] | None = None) -> dict:
-    """Run open-ended exploration and return structured results.
+    """Run exploration on pre-fetched signals (pure computation, no I/O).
 
-    Can be called with zero arguments — will scan HN top stories by default.
+    ``signals`` is the list of raw signal dicts.  The remaining keyword
+    arguments are accepted for backwards-compatibility but ignored when
+    *signals* is non-empty.  When *signals* is empty the function returns
+    a ``no_signals`` result.
     """
-    from ..tools.trend_scanner import scan_all
-
-    # Default subreddits covering diverse opportunity spaces
-    default_subs = [
-        "startup", "SaaS", "Entrepreneur", "sideproject",
-        "artificial", "MachineLearning",
-    ]
-    subs = subreddits or default_subs
-
-    # If no keywords, still scan HN and Reddit (the discovery path)
-    signals = scan_all(
-        keywords=keywords,
-        hn_top=hn_top or 30,
-        subreddits=subs,
-    )
-
     if not signals:
         return {
             "status": "no_signals",
@@ -232,7 +349,13 @@ def explore(hn_top: int = 30,
         }
 
     clusters = cluster_signals(signals)
-    hypotheses = generate_hypotheses(clusters)
+    demand_clusters_result = cluster_by_demand(signals)
+    demand_matrix_result = build_demand_matrix(signals)
+    hypotheses = generate_hypotheses(
+        clusters,
+        demand_clusters=demand_clusters_result,
+        demand_matrix=demand_matrix_result,
+    )
 
     return {
         "status": "ok",
@@ -240,7 +363,27 @@ def explore(hn_top: int = 30,
         "cluster_count": len(clusters),
         "hypotheses": hypotheses,
         "clusters": {k: len(v) for k, v in clusters.items()},
+        "demand_clusters": {k: len(v) for k, v in demand_clusters_result.items()},
+        "demand_matrix": demand_matrix_result,
     }
+
+
+def explore_with_fetch(hn_top: int = 30,
+                       subreddits: list[str] | None = None,
+                       keywords: list[str] | None = None) -> dict:
+    """Convenience wrapper: fetch signals then run explore().
+
+    This is the I/O-inclusive version for CLI / direct use.
+    """
+    from ..tools.trend_scanner import scan_all
+
+    subs = subreddits or _DEFAULT_SUBS
+    signals = scan_all(
+        keywords=keywords,
+        hn_top=hn_top or 30,
+        subreddits=subs,
+    )
+    return explore(signals)
 
 
 def format_exploration_report(result: dict) -> str:
@@ -265,6 +408,69 @@ def format_exploration_report(result: dict) -> str:
         lines.append(f"  {label:15s} {bar} ({count})")
     lines.append("")
 
+    # Demand landscape
+    demand_clusters = result.get("demand_clusters", {})
+    if demand_clusters:
+        # Show classified patterns first, unclassified at bottom (de-emphasized)
+        classified = {k: v for k, v in demand_clusters.items() if k != "unclassified"}
+        unclassified_count = demand_clusters.get("unclassified", 0)
+        if classified:
+            lines.extend(["## Demand Landscape", ""])
+            for pattern, count in sorted(classified.items(),
+                                          key=lambda x: x[1], reverse=True):
+                bar = "█" * min(count, 30)
+                label = pattern.replace("_", " ").title()
+                lines.append(f"  {label:20s} {bar} ({count})")
+            if unclassified_count:
+                lines.append(f"  {'Unclassified':20s} {'░' * min(unclassified_count, 30)} ({unclassified_count})")
+            lines.append("")
+
+    # Domain x Need Matrix
+    demand_matrix = result.get("demand_matrix", {})
+    if demand_matrix and demand_matrix.get("matrix"):
+        matrix = demand_matrix["matrix"]
+        all_patterns = sorted(demand_matrix.get("pattern_totals", {}).keys())
+        # Filter out unclassified from matrix display
+        all_patterns = [p for p in all_patterns if p != "unclassified"]
+        if all_patterns:
+            # Readable abbreviations for column headers
+            _abbrev = {
+                "decision_proxy": "decide",
+                "comparison": "compare",
+                "capability_gap": "howto",
+                "avoidance": "avoid",
+                "info_gap": "info",
+                "curation": "curate",
+            }
+            lines.extend(["## Domain x Need Matrix", ""])
+            # Header
+            header = "| Domain      |"
+            sep = "|-------------|"
+            for p in all_patterns:
+                col = _abbrev.get(p, p[:7])
+                header += f" {col:>7s} |"
+                sep += "---------|"
+            lines.append(header)
+            lines.append(sep)
+            # Rows
+            for domain in sorted(matrix.keys()):
+                label = domain.replace("_", " ").title()[:12]
+                row = f"| {label:<11s} |"
+                for p in all_patterns:
+                    count = matrix[domain].get(p, 0)
+                    cell = f"{count}" if count > 0 else "·"
+                    row += f" {cell:>7s} |"
+                lines.append(row)
+            lines.append("")
+
+            # Hotspots
+            hotspots = demand_matrix.get("hotspots", [])
+            if hotspots:
+                lines.append("**Hotspots** (domain + need with 2+ signals):")
+                for domain, pattern, count in hotspots[:5]:
+                    lines.append(f"  - {domain} x {pattern}: {count} signals")
+                lines.append("")
+
     # Hypotheses
     hypotheses = result.get("hypotheses", [])
     if not hypotheses:
@@ -281,8 +487,10 @@ def format_exploration_report(result: dict) -> str:
             f"Signals: {h['signal_count']} (strong={h['strong_signals']})",
             f"Sources: {', '.join(h['sources'])}",
             f"Themes: {', '.join(h['themes'])}",
-            "",
         ])
+        if h.get("dominant_need"):
+            lines.append(f"Dominant need: **{h['dominant_need'].replace('_', ' ').title()}**")
+        lines.append("")
 
         # Top signals
         if h.get("top_signals"):
