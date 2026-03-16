@@ -103,6 +103,7 @@ async def show_opportunity(opp_id: str) -> dict:
         "financials": opp.financials,
         "gate_log": opp.gate_log,
         "signal_count": len(opp.signals),
+        "experiments": getattr(opp, "experiments", []),
     })
 
 

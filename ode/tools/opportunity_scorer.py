@@ -96,46 +96,9 @@ FRAMEWORK_V2 = {
     ],
 }
 
-FRAMEWORK_V1 = {
-    "name": "Opportunity Scorecard v1",
-    "dimensions": [
-        {
-            "id": "market", "name": "Market Attractiveness", "weight": 30,
-            "criteria": [
-                {"id": "tam_size", "name": "Market Size", "description": "TAM > $1B = 10, > $100M = 7, > $10M = 4, < $10M = 2"},
-                {"id": "growth", "name": "Growth Rate", "description": "CAGR > 20% = 10, > 10% = 7, > 5% = 4, < 5% = 2"},
-                {"id": "timing", "name": "Market Timing", "description": "Early growth = 10, Mainstream = 7, Mature = 4, Decline = 1"},
-            ],
-        },
-        {
-            "id": "competition", "name": "Competitive Landscape", "weight": 20,
-            "criteria": [
-                {"id": "intensity", "name": "Competition Intensity", "description": "Blue ocean = 10, Few = 7, Red ocean = 3, Monopoly = 1"},
-                {"id": "barrier", "name": "Entry Barrier", "description": "Low = 10, Medium = 6, High = 3"},
-                {"id": "moat_potential", "name": "Moat Potential", "description": "Strong = 10, Medium = 6, Weak = 2"},
-            ],
-        },
-        {
-            "id": "capability", "name": "Capability Fit", "weight": 20,
-            "criteria": [
-                {"id": "skill_match", "name": "Skill Match", "description": "Core skills ready = 10, Minor learning = 7, Major learning = 3"},
-                {"id": "resource_need", "name": "Resource Need", "description": "Low = 10, Medium = 6, High = 3"},
-                {"id": "time_to_market", "name": "Time to Market", "description": "< 1mo = 10, < 3mo = 7, < 6mo = 4, > 6mo = 2"},
-            ],
-        },
-        {
-            "id": "economics", "name": "Economic Viability", "weight": 30,
-            "criteria": [
-                {"id": "ltv_cac", "name": "LTV/CAC Ratio", "description": "LTV/CAC > 5 = 10, > 3 = 8, > 1 = 5, < 1 = 1"},
-                {"id": "margin", "name": "Gross Margin", "description": "> 80% = 10, > 60% = 8, > 40% = 5, < 40% = 2"},
-                {"id": "payback", "name": "Payback Period", "description": "< 3mo = 10, < 6mo = 7, < 12mo = 4, > 12mo = 2"},
-            ],
-        },
-    ],
-    "thresholds": {"go": 70, "maybe": 50, "kill": 30},
-}
+# V1 removed — was dead code with no CLI access. V2 is the active framework.
 
-FRAMEWORKS = {"v1": FRAMEWORK_V1, "v2": FRAMEWORK_V2}
+FRAMEWORKS = {"v2": FRAMEWORK_V2}
 
 
 @dataclass

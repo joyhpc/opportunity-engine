@@ -10,8 +10,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-# Try to import pt engine
-_PT_ENGINE = None
+# Try to import pt engine for advanced scheduling
 _pt_path = Path.home() / "project-tracker"
 if _pt_path.exists():
     sys.path.insert(0, str(_pt_path))
@@ -22,9 +21,8 @@ if _pt_path.exists():
             compute_cpm,
             classify_tasks,
         )
-        _PT_ENGINE = True
     except ImportError:
-        _PT_ENGINE = False
+        pass
     finally:
         if str(_pt_path) in sys.path:
             sys.path.remove(str(_pt_path))
@@ -117,8 +115,10 @@ def create_pipeline(template: str = "default") -> PipelineDAG:
     if template == "default":
         return PipelineDAG(DEFAULT_PIPELINE)
 
-    # Try loading from flows/ directory
-    flows_dir = Path.home() / "opportunity-engine" / "flows"
+    # Try loading from flows/ directory (respects ODE_ROOT)
+    import os
+    from ..core.store import _project_root
+    flows_dir = _project_root() / "flows"
     flow_file = flows_dir / f"{template}.yaml"
     if flow_file.exists():
         import yaml

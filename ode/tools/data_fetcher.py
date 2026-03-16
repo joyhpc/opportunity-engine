@@ -1,24 +1,25 @@
-"""Data fetcher — web search + cache hybrid for evidence gathering."""
+"""Data fetcher — web search for evidence gathering.
+
+NOTE: cache_key() is unused. fetch_web() is not called by any worker.
+These are retained as utility functions for future evidence-gathering features.
+"""
 
 from __future__ import annotations
 
 import hashlib
-import json
 import logging
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
 
 def fetch_web(query: str, max_results: int = 5) -> list[dict]:
-    """Fetch web search results. Returns list of {title, url, snippet}."""
+    """Fetch web search results via DuckDuckGo. Returns [{title, url, snippet}]."""
     try:
         import requests
     except ImportError:
         logger.warning("requests not installed: pip install requests")
         return []
 
-    # Use DuckDuckGo instant answer API (no key needed)
     try:
         resp = requests.get(
             "https://api.duckduckgo.com/",
@@ -27,8 +28,6 @@ def fetch_web(query: str, max_results: int = 5) -> list[dict]:
         )
         data = resp.json()
         results = []
-
-        # Related topics
         for topic in data.get("RelatedTopics", [])[:max_results]:
             if "Text" in topic:
                 results.append({
@@ -37,7 +36,6 @@ def fetch_web(query: str, max_results: int = 5) -> list[dict]:
                     "snippet": topic.get("Text", ""),
                     "source": "duckduckgo",
                 })
-
         return results
     except Exception as e:
         logger.warning("Web fetch error: %s", e)

@@ -7,6 +7,7 @@ Returns structured signal dicts suitable for Signal model.
 from __future__ import annotations
 
 import logging
+import os
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
@@ -27,7 +28,9 @@ def scan_google_trends(keywords: list[str], timeframe: str = "today 3-m",
         logger.warning("pytrends not installed: pip install pytrends")
         return []
 
-    pytrends = TrendReq(hl="zh-CN", tz=480)
+    hl = os.environ.get("ODE_TRENDS_LOCALE", "zh-CN")
+    tz = int(os.environ.get("ODE_TRENDS_TZ", "480"))
+    pytrends = TrendReq(hl=hl, tz=tz)
     results = []
 
     for i in range(0, len(keywords), 5):

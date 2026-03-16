@@ -101,6 +101,23 @@ def cmd_show(args):
     if d["signal_count"]:
         print(f"\nSignals: {d['signal_count']}")
 
+    experiments = d.get("experiments", [])
+    if experiments:
+        print(f"\nExperiments ({len(experiments)}):")
+        for e in experiments:
+            icon = {"pass": "+", "fail": "x", "partial": "~"}.get(e.get("outcome", ""), "?")
+            cogs_str = f" COGS=${e['cogs']:.2f}" if e.get("cogs") else ""
+            print(f"  [{icon}] {e.get('version', '?')}: {e.get('result', e.get('description', ''))[:60]}{cogs_str}")
+
+    actuals = d.get("financials", {}).get("actuals", {})
+    if actuals and actuals.get("cogs_per_unit") is not None:
+        print(f"\nActuals:")
+        print(f"  COGS/unit: ${actuals['cogs_per_unit']:.2f}")
+        if actuals.get("cogs_variance_pct") is not None:
+            print(f"  vs estimate: {actuals['cogs_variance_pct']:+.1f}%")
+        if actuals.get("notes"):
+            print(f"  Notes: {actuals['notes']}")
+
 
 def cmd_scan(args):
     """Run signal scanning."""
@@ -323,6 +340,7 @@ def main():
         prog="ode",
         description="Opportunity Discovery Engine",
     )
+    parser.add_argument("--json", action="store_true", help="Output raw JSON")
     sub = parser.add_subparsers(dest="command")
 
     # create
@@ -439,9 +457,36 @@ def main():
 
     cmd_func = commands.get(args.command)
     if cmd_func:
-        cmd_func(args)
+        if getattr(args, "json", False):
+            # JSON mode: intercept and output raw service result
+            _run_json_mode(args)
+        else:
+            cmd_func(args)
     else:
         parser.print_help()
+
+
+def _run_json_mode(args):
+    """Run command and output raw JSON from service layer."""
+    dispatch = {
+        "create": lambda: asyncio.run(service.create_opportunity(
+            name=args.name,
+            domain=getattr(args, "domain", "") or "",
+            keywords=[k.strip() for k in args.keywords.split(",")] if getattr(args, "keywords", None) else [],
+        )),
+        "list": lambda: asyncio.run(service.list_opportunities()),
+        "show": lambda: asyncio.run(service.show_opportunity(args.opp_id)),
+        "status": lambda: asyncio.run(service.get_status()),
+        "portfolio": lambda: asyncio.run(service.get_portfolio()),
+        "insights": lambda: asyncio.run(service.get_insights(args.opp_id)),
+        "refresh-gate": lambda: asyncio.run(service.refresh_gate(args.opp_id)),
+    }
+    func = dispatch.get(args.command)
+    if func:
+        result = func()
+        print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+    else:
+        print(json.dumps({"ok": False, "message": f"--json not supported for '{args.command}' yet"}))
 
 
 if __name__ == "__main__":
