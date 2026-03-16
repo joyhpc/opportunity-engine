@@ -23,3 +23,7 @@ data/cache.db
 # OS
 .DS_Store
 Thumbs.db
+
+# Prototype outputs (large binary files)
+prototypes/storybook/output/
+prototypes/storybook/output_v2/

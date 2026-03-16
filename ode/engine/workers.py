@@ -7,18 +7,20 @@ that the Engine calls via asyncio.gather() for parallelism.
 from __future__ import annotations
 
 import asyncio
+import logging
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 from ..core.models import (
     Opportunity, Signal, WorkerResult, _now_iso, _new_id,
 )
 from ..core.store import (
     save_opportunity, load_opportunity, save_signal,
-    list_signals, save_evidence, reports_dir,
+    list_signals, reports_dir,
 )
 from ..tools import trend_scanner, market_sizer, opportunity_scorer
 from ..tools import financial_model, competitor_matrix, report_generator
-from ..tools import tech_feasibility
 from .gate import evaluate_gate
 
 
@@ -198,7 +200,7 @@ async def eval_worker(
                 [s.to_dict() for s in signals],
                 domain=opp.domain,
                 market_data=opp.market if opp.market.get("tam") else None,
-                financial_data=opp.financials if opp.financials.get("ltv") else None,
+                financial_data=opp.financials if opp.financials.get("ltv", 0) > 0 else None,
             )
             scores = scores_to_flat(inferred)
             eval_data["auto_inferred"] = True
@@ -213,6 +215,8 @@ async def eval_worker(
         }
         # FIX #6/#7: store the actual weighted percentage for portfolio/report use
         opp.scores["_weighted_pct"] = scoring_result.percentage
+        # Store scoring details for reframe context awareness
+        opp.scores["_scoring_details"] = scoring_result.details
         eval_data["scoring"] = scoring_result.to_dict()
 
         # Evaluate gate
@@ -315,8 +319,8 @@ async def report_worker(
             synthesis = synthesize(opp_data)
             if synthesis["contradictions"] or synthesis["blind_spots"]:
                 report_text += "\n\n" + format_synthesis_report(synthesis)
-        except Exception:
-            pass  # Don't break report generation if synthesis fails
+        except Exception as e:
+            logger.warning("Synthesis failed for %s: %s", opp_id, e)
 
     # Save report
     rdir = reports_dir()

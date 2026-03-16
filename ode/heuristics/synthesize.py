@@ -45,14 +45,15 @@ def find_contradictions(opp_data: dict) -> list[dict]:
             "action": "Pre-sell to 3 people at your target price before building anything.",
         })
 
-    # 3. Strong signals but weak competition = possibly empty market
+    # 3. Strong signals but no competitors = possibly empty market
+    # intensity scale: 10 = blue ocean, 7 = few, 3 = red ocean
     strong_signals = sum(1 for s in signals if s.get("strength") == "强") if isinstance(signals, list) else 0
     comp_score = scores.get("intensity") or _dim_avg(scores, "Competitive")
-    if strong_signals >= 3 and comp_score and comp_score >= 8:
+    if strong_signals >= 3 and comp_score and comp_score <= 4:
         contradictions.append({
             "type": "signal_vs_competition",
             "title": "Strong trend signals but no competitors",
-            "description": f"{strong_signals} strong signals but competition intensity is {comp_score}/10 (low = few competitors).",
+            "description": f"{strong_signals} strong signals but competition intensity is {comp_score}/10 (high = blue ocean, low = red ocean).",
             "implication": "Beware of 'empty markets.' If smart people see the signals but aren't building here, there may be a hidden barrier (regulation, unit economics, tech feasibility).",
             "action": "Ask: why hasn't anyone built this yet? Search for failed startups in this space and learn from post-mortems.",
         })

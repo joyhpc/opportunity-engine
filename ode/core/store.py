@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import dataclasses
+import logging
 import os
+import tempfile
 from pathlib import Path
 from typing import Optional, Type, TypeVar
 
 import yaml
+
+logger = logging.getLogger(__name__)
 
 from .models import Opportunity, Signal, Competitor, Evidence
 from .constants import (
@@ -46,13 +51,23 @@ def _entity_dir(entity_type: str) -> Path:
 
 
 def save_entity(entity, entity_type: str) -> Path:
-    """Save an entity (dataclass with to_dict()) to YAML."""
+    """Save an entity (dataclass with to_dict()) to YAML. Uses atomic write."""
     d = entity.to_dict()
     d["_schema_version"] = SCHEMA_VERSION
     dirpath = _entity_dir(entity_type)
     filepath = dirpath / f"{entity.id}.yaml"
-    with open(filepath, "w", encoding="utf-8") as f:
-        yaml.dump(d, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+    # Atomic write: write to temp file then rename
+    fd, tmp_path = tempfile.mkstemp(dir=dirpath, suffix=".yaml.tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            yaml.dump(d, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+        os.replace(tmp_path, filepath)
+    except Exception:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
     return filepath
 
 
@@ -68,7 +83,6 @@ def load_entity(entity_id: str, entity_type: str, cls: Type[T]) -> Optional[T]:
     if not d:
         return None
     # Filter to only fields the dataclass accepts
-    import dataclasses
     valid_fields = {f.name for f in dataclasses.fields(cls)}
     filtered = {k: v for k, v in d.items() if k in valid_fields}
     if not filtered:
@@ -82,20 +96,19 @@ def list_entities(entity_type: str, cls: Type[T]) -> list[T]:
     if not dirpath.exists():
         return []
     results = []
-    import dataclasses
     valid_fields = {f.name for f in dataclasses.fields(cls)}
     for filepath in sorted(dirpath.glob("*.yaml")):
         with open(filepath, "r", encoding="utf-8") as f:
             d = yaml.safe_load(f) or {}
         d.pop("_schema_version", None)
         if not d:
-            print(f"Warning: skipped empty/corrupt {filepath}", file=__import__('sys').stderr)
+            logger.warning("Skipped empty/corrupt %s", filepath)
             continue
         filtered = {k: v for k, v in d.items() if k in valid_fields}
         try:
             results.append(cls(**filtered))
         except TypeError as e:
-            print(f"Warning: skipped malformed {filepath}: {e}", file=__import__('sys').stderr)
+            logger.warning("Skipped malformed %s: %s", filepath, e)
             continue
     return results
 
@@ -130,10 +143,18 @@ def load_signal(sig_id: str) -> Optional[Signal]:
     return load_entity(sig_id, "signal", Signal)
 
 def list_signals(opportunity_id: str = "") -> list[Signal]:
-    all_sigs = list_entities("signal", Signal)
     if opportunity_id:
-        return [s for s in all_sigs if s.opportunity_id == opportunity_id]
-    return all_sigs
+        # Fast path: load only signals linked to this opportunity
+        opp = load_opportunity(opportunity_id)
+        if opp and opp.signals:
+            results = []
+            for sig_id in opp.signals:
+                sig = load_entity(sig_id, "signal", Signal)
+                if sig:
+                    results.append(sig)
+            return results
+        return []
+    return list_entities("signal", Signal)
 
 def save_competitor(comp: Competitor) -> Path:
     return save_entity(comp, "competitor")
@@ -156,6 +177,10 @@ def reports_dir() -> Path:
 
 def find_opportunity_by_name(name: str) -> Optional[Opportunity]:
     """Find an opportunity by name (case-insensitive partial match)."""
+    # Fast path: try direct ID load first
+    direct = load_opportunity(name)
+    if direct:
+        return direct
     name_lower = name.lower()
     for opp in list_opportunities():
         if name_lower in opp.name.lower() or name_lower in opp.id.lower():

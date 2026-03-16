@@ -38,7 +38,9 @@ def _has_keywords(signals: list[dict], keywords: list[str]) -> bool:
     all_text = " ".join(
         f"{s.get('title', '')} {s.get('keyword', '')}" for s in signals
     ).lower()
-    return any(kw.lower() in all_text for kw in keywords)
+    # Pad for boundary-aware keywords like " vs "
+    padded = f" {all_text} "
+    return any(kw.lower() in padded for kw in keywords)
 
 
 def infer_scores(signals: list[dict],
@@ -109,7 +111,7 @@ def infer_scores(signals: list[dict],
     # ── Competitive Landscape ──────────────────────────────
 
     # intensity: hard to infer from signals alone, default moderate
-    competitor_keywords = ["vs", "alternative", "competitor", "better than",
+    competitor_keywords = [" vs ", "alternative", "competitor", "better than",
                           "compared to", "switch from"]
     has_comp_signals = _has_keywords(signals, competitor_keywords)
     if has_comp_signals:
@@ -148,9 +150,9 @@ def infer_scores(signals: list[dict],
         else:
             scores["ltv_cac"] = (2, "data", f"LTV/CAC={ltv_cac:.1f}x")
 
+        cogs_pct = financial_data.get("cogs_pct", 20)
         margin = financial_data.get("gross_margin_pct",
-            ((financial_data.get("arpu", 0) - financial_data.get("arpu", 0) * 0.2) /
-             max(financial_data.get("arpu", 1), 1) * 100) if financial_data.get("arpu") else 0)
+            (100 - cogs_pct) if financial_data.get("arpu") else 0)
         if margin > 80:
             scores["margin"] = (10, "data", f"margin={margin:.0f}%")
         elif margin > 60:
@@ -225,6 +227,161 @@ def infer_scores(signals: list[dict],
 def scores_to_flat(inferred: dict) -> dict:
     """Convert inferred scores dict to flat {criterion_id: score} for scorer."""
     return {k: v[0] for k, v in inferred.items()}
+
+
+def quick_assess(signals: list[dict],
+                 domain: str = "",
+                 market_data: dict | None = None) -> dict:
+    """Early-stage binary assessment — replaces meaningless 55-65 scores.
+
+    Instead of 1-10 scales that cluster around 5, uses categorical
+    judgments that are actually useful for comparison.
+    """
+    all_text = " ".join(
+        f"{s.get('title', '')} {s.get('keyword', '')}" for s in signals
+    ).lower()
+
+    # -- can_you_do_it --
+    software_domains = {"devtools", "saas", "ai_ml", "creator", "ecommerce"}
+    regulated_domains = {"health", "fintech", "climate"}
+    if domain in software_domains:
+        can_do = "yes"
+    elif domain in regulated_domains:
+        can_do = "need_partner"
+    else:
+        # Check signal text for software vs regulated hints
+        sw_kw = ["saas", "app", "platform", "tool", "software", "api", "code"]
+        reg_kw = ["medical", "clinic", "bank", "compliance", "regulation", "fda"]
+        if any(kw in all_text for kw in reg_kw):
+            can_do = "need_partner"
+        elif any(kw in all_text for kw in sw_kw):
+            can_do = "yes"
+        else:
+            can_do = "yes"  # default optimistic for unknown
+
+    # -- existing_revenue_proof --
+    revenue_kw = ["pricing", "revenue", "arr", "paid", "customers", "mrr",
+                  "subscription", "paying", "price", "monetiz"]
+    has_revenue = any(kw in all_text for kw in revenue_kw)
+
+    # -- days_to_first_test --
+    hw_domains = {"hardware", "robotics", "climate"}
+    if domain in hw_domains:
+        days = "<90"
+    elif domain in software_domains:
+        days = "<7"
+    else:
+        days = "<30"
+
+    # -- competition_density --
+    comp_kw = [" vs ", "alternative", "competitor", "better than",
+               "compared to", "switch from", "instead of"]
+    # Pad text for word-boundary matching
+    padded_text = f" {all_text} "
+    comp_count = sum(1 for kw in comp_kw if kw in padded_text)
+    # Boost from market_data if available
+    if market_data and market_data.get("competitors"):
+        comp_count += min(market_data["competitors"], 6)
+    if comp_count == 0:
+        density = "empty"
+    elif comp_count <= 2:
+        density = "sparse"
+    elif comp_count <= 5:
+        density = "crowded"
+    else:
+        density = "dominated"
+
+    # -- user_urgency --
+    fire_kw = ["urgent", "broken", "stuck", "critical", "emergency",
+               "asap", "desperate", "nightmare", "can't work"]
+    nice_kw = ["would be nice", "cool if", "maybe someday", "nice to have",
+               "eventually"]
+    pain_kw = ["frustrated", "hate", "painful", "annoying", "struggle",
+               "problem", "issue", "need help"]
+    if any(kw in all_text for kw in fire_kw):
+        urgency = "hair_on_fire"
+    elif any(kw in all_text for kw in pain_kw):
+        urgency = "nice_to_have"
+    elif any(kw in all_text for kw in nice_kw):
+        urgency = "meh"
+    else:
+        urgency = "meh"
+
+    # -- reasoning --
+    reasoning = {
+        "can_you_do_it": f"domain={domain or 'unknown'}",
+        "existing_revenue_proof": "revenue keywords found" if has_revenue else "no revenue signals",
+        "days_to_first_test": f"based on domain={domain or 'general'}",
+        "competition_density": f"{comp_count} competition keywords matched",
+        "user_urgency": f"inferred from signal text patterns",
+    }
+
+    return {
+        "can_you_do_it": can_do,
+        "existing_revenue_proof": "yes" if has_revenue else "no",
+        "days_to_first_test": days,
+        "competition_density": density,
+        "user_urgency": urgency,
+        "reasoning": reasoning,
+    }
+
+
+def format_quick_assess_report(assessment: dict) -> str:
+    """Format quick assessment as a readable summary."""
+    icons = {
+        "can_you_do_it": {"yes": "YES", "need_partner": "NEED PARTNER", "no": "NO"},
+        "existing_revenue_proof": {"yes": "YES", "no": "NO"},
+        "days_to_first_test": {"<7": "<7 days", "<30": "<30 days", "<90": "<90 days"},
+        "competition_density": {"empty": "EMPTY", "sparse": "SPARSE", "crowded": "CROWDED", "dominated": "DOMINATED"},
+        "user_urgency": {"hair_on_fire": "HAIR ON FIRE", "nice_to_have": "NICE TO HAVE", "meh": "MEH"},
+    }
+
+    lines = [
+        "# Quick Assessment (Early Stage)",
+        "",
+        "Binary/categorical judgments — more useful than 1-10 scales at this stage.",
+        "",
+        "| Question | Answer | Reasoning |",
+        "|----------|--------|-----------|",
+    ]
+
+    labels = {
+        "can_you_do_it": "Can you build this?",
+        "existing_revenue_proof": "Revenue proof exists?",
+        "days_to_first_test": "Days to first test?",
+        "competition_density": "Competition density?",
+        "user_urgency": "User urgency?",
+    }
+
+    reasoning = assessment.get("reasoning", {})
+    for field, label in labels.items():
+        val = assessment.get(field, "?")
+        display = icons.get(field, {}).get(val, val)
+        reason = reasoning.get(field, "")
+        lines.append(f"| {label} | **{display}** | {reason} |")
+
+    # Summary verdict
+    lines.append("")
+    green = 0
+    if assessment.get("can_you_do_it") == "yes":
+        green += 1
+    if assessment.get("existing_revenue_proof") == "yes":
+        green += 1
+    if assessment.get("days_to_first_test") == "<7":
+        green += 1
+    if assessment.get("competition_density") in ("empty", "sparse"):
+        green += 1
+    if assessment.get("user_urgency") == "hair_on_fire":
+        green += 1
+
+    if green >= 4:
+        lines.append("**Summary: Strong early signal — worth a 1-week sprint.**")
+    elif green >= 2:
+        lines.append("**Summary: Mixed signals — investigate the weak areas before committing.**")
+    else:
+        lines.append("**Summary: Weak early signal — consider pivoting or gathering more data.**")
+
+    return "\n".join(lines)
 
 
 def format_bridge_report(inferred: dict) -> str:

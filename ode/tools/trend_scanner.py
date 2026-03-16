@@ -6,8 +6,12 @@ Returns structured signal dicts suitable for Signal model.
 
 from __future__ import annotations
 
+import logging
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -20,7 +24,7 @@ def scan_google_trends(keywords: list[str], timeframe: str = "today 3-m",
     try:
         from pytrends.request import TrendReq
     except ImportError:
-        print("pytrends not installed: pip install pytrends", file=sys.stderr)
+        logger.warning("pytrends not installed: pip install pytrends")
         return []
 
     pytrends = TrendReq(hl="zh-CN", tz=480)
@@ -32,7 +36,7 @@ def scan_google_trends(keywords: list[str], timeframe: str = "today 3-m",
             pytrends.build_payload(batch, cat=0, timeframe=timeframe, geo=geo)
             interest = pytrends.interest_over_time()
         except Exception as e:
-            print(f"Google Trends error for {batch}: {e}", file=sys.stderr)
+            logger.warning("Google Trends error for %s: %s", batch, e)
             continue
 
         if interest.empty:
@@ -86,7 +90,7 @@ def scan_hackernews(top_n: int = 30) -> list[dict]:
     try:
         import requests
     except ImportError:
-        print("requests not installed: pip install requests", file=sys.stderr)
+        logger.warning("requests not installed: pip install requests")
         return []
 
     results = []
@@ -100,16 +104,16 @@ def scan_hackernews(top_n: int = 30) -> list[dict]:
             return results
         story_ids = data[:top_n]
 
-        for sid in story_ids:
+        def _fetch_item(sid):
             try:
                 item = requests.get(
                     f"https://hacker-news.firebaseio.com/v0/item/{sid}.json",
                     timeout=5,
                 ).json()
                 if not item or not isinstance(item, dict):
-                    continue
+                    return None
                 score = item.get("score", 0)
-                results.append({
+                return {
                     "source": "hackernews",
                     "keyword": "",
                     "title": item.get("title", ""),
@@ -119,11 +123,18 @@ def scan_hackernews(top_n: int = 30) -> list[dict]:
                     "strength": "强" if score > 200 else "中" if score > 50 else "弱",
                     "momentum": 0,
                     "time": datetime.fromtimestamp(item.get("time", 0)).isoformat(),
-                })
+                }
             except Exception:
-                continue
+                return None
+
+        with ThreadPoolExecutor(max_workers=10) as pool:
+            futures = {pool.submit(_fetch_item, sid): sid for sid in story_ids}
+            for future in as_completed(futures):
+                item = future.result()
+                if item:
+                    results.append(item)
     except Exception as e:
-        print(f"HN scan failed: {e}", file=sys.stderr)
+        logger.error("HN scan failed: %s", e)
 
     return results
 
@@ -138,7 +149,7 @@ def scan_reddit(subreddits: list[str], limit: int = 10) -> list[dict]:
         import requests
         import xml.etree.ElementTree as ET
     except ImportError:
-        print("requests not installed: pip install requests", file=sys.stderr)
+        logger.warning("requests not installed: pip install requests")
         return []
 
     results = []
@@ -152,21 +163,19 @@ def scan_reddit(subreddits: list[str], limit: int = 10) -> list[dict]:
                 headers=headers, timeout=10,
             )
             if resp.status_code != 200:
-                print(f"Reddit r/{sub} RSS returned {resp.status_code}", file=sys.stderr)
+                logger.warning("Reddit r/%s RSS returned %s", sub, resp.status_code)
                 continue
 
             root = ET.fromstring(resp.text)
             entries = root.findall("atom:entry", ns)
 
-            for entry in entries[:limit]:
+            for position, entry in enumerate(entries[:limit]):
                 title_el = entry.find("atom:title", ns)
                 link_el = entry.find("atom:link", ns)
                 title = title_el.text if title_el is not None else ""
                 url = link_el.get("href", "") if link_el is not None else ""
 
                 # RSS doesn't include score/comments, estimate from position
-                # Top posts in hot RSS are roughly ordered by engagement
-                position = entries.index(entry)
                 estimated_strength = "强" if position < 3 else "中" if position < 7 else "弱"
 
                 results.append({
@@ -180,7 +189,7 @@ def scan_reddit(subreddits: list[str], limit: int = 10) -> list[dict]:
                     "momentum": 0,
                 })
         except Exception as e:
-            print(f"Reddit r/{sub} scan failed: {e}", file=sys.stderr)
+            logger.warning("Reddit r/%s scan failed: %s", sub, e)
 
     return results
 
