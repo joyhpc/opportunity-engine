@@ -153,6 +153,11 @@ class Opportunity:
     gate_log: list[dict] = field(default_factory=list)
     # e.g. [{"gate": "SCREEN", "verdict": "GO", "score": 75, "ts": "..."}]
 
+    # Experiment / prototype iteration log
+    experiments: list[dict] = field(default_factory=list)
+    # e.g. [{"version": "v1", "description": "...", "cogs": 0.25,
+    #         "outcome": "pass"|"fail"|"partial", "metrics": {}, "ts": "..."}]
+
     def __post_init__(self):
         if not self.id:
             self.id = _new_id("opp-")
@@ -168,7 +173,8 @@ class Opportunity:
     def advance(self, to_stage: str, verdict: str, score: float = 0):
         """Record a gate passage and advance to next stage."""
         from .constants import STAGES
-        assert to_stage in STAGES, f"Invalid stage: {to_stage}"
+        if to_stage not in STAGES:
+            raise ValueError(f"Invalid stage: {to_stage}")
         self.gate_log.append({
             "gate": self.stage,
             "verdict": verdict,

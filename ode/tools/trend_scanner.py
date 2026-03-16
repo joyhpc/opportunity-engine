@@ -198,6 +198,15 @@ def scan_reddit(subreddits: list[str], limit: int = 10) -> list[dict]:
 # Aggregate scan
 # ---------------------------------------------------------------------------
 
+def _relevance_score(signal: dict, keywords: list[str]) -> float:
+    """0.0-1.0: fraction of keywords matched in title+keyword field."""
+    if not keywords:
+        return 1.0
+    text = f"{signal.get('title', '')} {signal.get('keyword', '')}".lower()
+    hits = sum(1 for kw in keywords if kw.lower() in text)
+    return hits / len(keywords)
+
+
 def scan_all(keywords: list[str] | None = None,
              domain: str = "",
              hn_top: int = 0,
@@ -215,6 +224,17 @@ def scan_all(keywords: list[str] | None = None,
 
     if subreddits:
         signals.extend(scan_reddit(subreddits))
+
+    # Relevance scoring: attach score and filter noise
+    if keywords and signals:
+        for s in signals:
+            s["relevance_score"] = round(_relevance_score(s, keywords), 2)
+        # Keep signals with any keyword match, or strong/medium HN signals
+        signals = [
+            s for s in signals
+            if s.get("relevance_score", 0) >= 0.1
+            or s.get("strength") in ("强", "中")
+        ]
 
     # Filter by domain keyword if specified
     if domain and signals:

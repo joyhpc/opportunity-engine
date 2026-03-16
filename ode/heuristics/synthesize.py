@@ -81,6 +81,44 @@ def find_contradictions(opp_data: dict) -> list[dict]:
                 "action": "Review the specific redline that triggered. Can it be addressed with a pivot or partnership?",
             })
 
+    # 6. COGS estimate vs actual variance
+    actuals = financials.get("actuals", {})
+    cogs_actual = actuals.get("cogs_per_unit")
+    cogs_est = financials.get("cogs_per_unit_estimated")
+    if cogs_actual and cogs_est and cogs_est > 0:
+        variance = (cogs_actual - cogs_est) / cogs_est
+        if abs(variance) > 0.2:
+            direction = "over" if variance < 0 else "under"
+            contradictions.append({
+                "type": "cogs_estimate_vs_actual",
+                "title": f"COGS estimate was {direction} by {abs(variance):.0%}",
+                "description": f"Estimated ${cogs_est:.2f}/unit, actual ${cogs_actual:.2f}/unit.",
+                "implication": "Your financial model may be systematically biased. Re-run eval with actual COGS.",
+                "action": f"Run: ode eval <id> --cogs-pct {cogs_actual / max(financials.get('arpu', 1), 0.01) * 100:.0f}",
+            })
+
+    # 7. Prototype experiments vs score
+    experiments = opp_data.get("experiments", [])
+    if experiments:
+        failed = [e for e in experiments if e.get("outcome") == "fail"]
+        passed = [e for e in experiments if e.get("outcome") == "pass"]
+        if passed and score < 50:
+            contradictions.append({
+                "type": "prototype_vs_score",
+                "title": f"{len(passed)} prototype(s) passed but score is only {score:.0f}/100",
+                "description": "Real-world validation succeeded but the scoring model disagrees.",
+                "implication": "The score may be stale or the scoring weights don't reflect validation progress. Consider refreshing the gate.",
+                "action": "Run: ode refresh-gate <id>",
+            })
+        if len(failed) >= 2 and isinstance(scores.get("mvt_result"), (int, float)) and scores.get("mvt_result", 0) >= 7:
+            contradictions.append({
+                "type": "experiment_vs_score",
+                "title": f"{len(failed)} prototype failures vs high validation score ({scores.get('mvt_result')}/10)",
+                "description": "Validation score suggests traction, but prototype log shows repeated failures.",
+                "implication": "Scores may not reflect real-world prototype findings. Update mvt_result score.",
+                "action": "Re-run eval with scores reflecting actual prototype outcomes.",
+            })
+
     return contradictions
 
 

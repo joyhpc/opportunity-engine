@@ -268,6 +268,56 @@ def cmd_insights(args):
         print(format_reframe_report(d["reframe"]))
 
 
+def cmd_experiment(args):
+    """Record a prototype iteration."""
+    metrics = json.loads(args.metrics) if args.metrics else None
+    result = asyncio.run(service.add_experiment(
+        args.opp_id, version=args.version,
+        description=args.description or "",
+        cogs=args.cogs, outcome=args.outcome or "partial",
+        metrics=metrics, result=args.result or "",
+    ))
+    if not result["ok"]:
+        print(result["message"], file=sys.stderr)
+        sys.exit(1)
+    d = result["data"]
+    print(f"Experiment {d['version']} recorded ({d['outcome']})")
+    print(f"  Total experiments: {d['experiment_count']}")
+
+
+def cmd_record_actuals(args):
+    """Record actual financial data."""
+    result = asyncio.run(service.record_actuals(
+        args.opp_id, cogs=args.cogs, arpu=args.arpu,
+        units_sold=args.units_sold, notes=args.notes or "",
+    ))
+    if not result["ok"]:
+        print(result["message"], file=sys.stderr)
+        sys.exit(1)
+    actuals = result["data"].get("actuals", {})
+    print("Actuals recorded:")
+    for k, v in actuals.items():
+        if v is not None and v != "":
+            print(f"  {k}: {v}")
+
+
+def cmd_refresh_gate(args):
+    """Re-evaluate gate with current state."""
+    result = asyncio.run(service.refresh_gate(args.opp_id))
+    if not result["ok"]:
+        print(result["message"], file=sys.stderr)
+        sys.exit(1)
+    d = result["data"]
+    if d["verdict_changed"]:
+        print(f"Gate CHANGED: {d['previous_verdict']} → {d['new_verdict']}")
+    else:
+        print(f"Gate unchanged: {d['new_verdict']}")
+    if d.get("detail"):
+        print(f"  {d['detail']}")
+    if d.get("passed_experiments"):
+        print(f"  Passed experiments: {d['passed_experiments']}")
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="ode",
@@ -342,6 +392,28 @@ def main():
     p = sub.add_parser("insights", help="Generate insights for an opportunity")
     p.add_argument("opp_id", help="Opportunity ID or name")
 
+    # experiment
+    p = sub.add_parser("experiment", help="Record a prototype iteration")
+    p.add_argument("opp_id", help="Opportunity ID or name")
+    p.add_argument("--version", required=True, help="Version label (e.g., v1, v2)")
+    p.add_argument("--description", help="What was tested")
+    p.add_argument("--cogs", type=float, help="Actual COGS per unit")
+    p.add_argument("--outcome", choices=["pass", "fail", "partial"], help="Result")
+    p.add_argument("--result", help="Summary of findings")
+    p.add_argument("--metrics", help="Metrics JSON")
+
+    # record-actuals
+    p = sub.add_parser("record-actuals", help="Record actual financial data")
+    p.add_argument("opp_id", help="Opportunity ID or name")
+    p.add_argument("--cogs", type=float, help="Actual COGS per unit")
+    p.add_argument("--arpu", type=float, help="Actual ARPU")
+    p.add_argument("--units-sold", type=int, help="Units sold")
+    p.add_argument("--notes", help="Notes")
+
+    # refresh-gate
+    p = sub.add_parser("refresh-gate", help="Re-evaluate gate with current state")
+    p.add_argument("opp_id", help="Opportunity ID or name")
+
     args = parser.parse_args()
 
     if not args.command:
@@ -360,6 +432,9 @@ def main():
         "compare": cmd_compare,
         "explore": cmd_explore,
         "insights": cmd_insights,
+        "experiment": cmd_experiment,
+        "record-actuals": cmd_record_actuals,
+        "refresh-gate": cmd_refresh_gate,
     }
 
     cmd_func = commands.get(args.command)

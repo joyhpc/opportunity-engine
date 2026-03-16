@@ -29,9 +29,27 @@ def _fail(message: str) -> dict:
 async def create_opportunity(*, name: str, domain: str = "",
                              keywords: list[str] | None = None,
                              description: str = "",
-                             custom_id: str = "") -> dict:
+                             custom_id: str = "",
+                             force: bool = False) -> dict:
     from ode.core.models import Opportunity
-    from ode.core.store import save_opportunity
+    from ode.core.store import save_opportunity, list_opportunities as _list_opps
+
+    # Dedup check: skip if force=True
+    if not force:
+        for opp in _list_opps():
+            if opp.name.lower() == name.lower():
+                return _ok({
+                    "id": opp.id, "name": opp.name, "domain": opp.domain,
+                    "keywords": opp.keywords, "path": "", "deduplicated": True,
+                }, message=f"Existing opportunity '{opp.name}' (id={opp.id})")
+            if keywords:
+                overlap = set(k.lower() for k in keywords) & set(k.lower() for k in opp.keywords)
+                if len(overlap) / max(len(keywords), 1) >= 0.7:
+                    return _ok({
+                        "id": opp.id, "name": opp.name, "domain": opp.domain,
+                        "keywords": opp.keywords, "path": "",
+                        "deduplicated": True, "similar_keywords": list(overlap),
+                    }, message=f"Similar opportunity '{opp.name}' found — use --force to create anyway")
 
     opp = Opportunity(
         name=name,
@@ -328,6 +346,7 @@ async def get_insights(opp_id: str) -> dict:
         "gate_log": opp.gate_log,
         "stage": opp.stage,
         "domain": opp.domain,
+        "experiments": getattr(opp, "experiments", []),
     }
 
     # Synthesis
@@ -374,3 +393,143 @@ async def get_insights(opp_id: str) -> dict:
         "demand_pattern": demand_pattern,
         "reframe": reframe,
     })
+
+
+# ---------------------------------------------------------------------------
+# Experiment tracking
+# ---------------------------------------------------------------------------
+
+async def add_experiment(opp_id: str, *, version: str, description: str = "",
+                         cogs: float | None = None, outcome: str = "partial",
+                         metrics: dict | None = None, result: str = "") -> dict:
+    """Record a prototype iteration / validation experiment."""
+    from ode.core.models import _now_iso
+    from ode.core.store import load_opportunity, find_opportunity_by_name, save_opportunity
+
+    opp = load_opportunity(opp_id) or find_opportunity_by_name(opp_id)
+    if not opp:
+        return _fail(f"Opportunity not found: {opp_id}")
+
+    entry = {
+        "version": version,
+        "description": description,
+        "cogs": cogs,
+        "outcome": outcome,
+        "result": result,
+        "metrics": metrics or {},
+        "ts": _now_iso(),
+    }
+    if not hasattr(opp, "experiments") or opp.experiments is None:
+        opp.experiments = []
+    opp.experiments.append(entry)
+    opp.updated_at = _now_iso()
+
+    # Auto-update actuals if outcome=pass and cogs provided
+    if cogs is not None and outcome == "pass":
+        opp.financials.setdefault("actuals", {})["cogs_per_unit"] = cogs
+        opp.financials["actuals"]["recorded_at"] = _now_iso()
+
+    save_opportunity(opp)
+    return _ok({
+        "version": version,
+        "outcome": outcome,
+        "experiment_count": len(opp.experiments),
+    }, message=f"Experiment {version} recorded ({outcome})")
+
+
+# ---------------------------------------------------------------------------
+# Record actuals (estimated vs measured)
+# ---------------------------------------------------------------------------
+
+async def record_actuals(opp_id: str, *, cogs: float | None = None,
+                         arpu: float | None = None, units_sold: int | None = None,
+                         notes: str = "") -> dict:
+    """Record actual financial data from real-world validation."""
+    from ode.core.models import _now_iso
+    from ode.core.store import load_opportunity, find_opportunity_by_name, save_opportunity
+
+    opp = load_opportunity(opp_id) or find_opportunity_by_name(opp_id)
+    if not opp:
+        return _fail(f"Opportunity not found: {opp_id}")
+
+    actuals = opp.financials.setdefault("actuals", {})
+    if cogs is not None:
+        actuals["cogs_per_unit"] = cogs
+        # Compute variance vs estimate
+        est = opp.financials.get("cogs_per_unit_estimated")
+        if est and est > 0:
+            actuals["cogs_variance_pct"] = round((cogs - est) / est * 100, 1)
+    if arpu is not None:
+        actuals["arpu_actual"] = arpu
+    if units_sold is not None:
+        actuals["units_sold"] = units_sold
+    actuals["notes"] = notes
+    actuals["recorded_at"] = _now_iso()
+    opp.updated_at = _now_iso()
+    save_opportunity(opp)
+
+    return _ok({"actuals": actuals}, message="Actuals recorded")
+
+
+# ---------------------------------------------------------------------------
+# Refresh gate (re-evaluate with current state)
+# ---------------------------------------------------------------------------
+
+async def refresh_gate(opp_id: str) -> dict:
+    """Re-evaluate the current gate with latest data including experiments."""
+    from ode.core.models import _now_iso
+    from ode.core.store import load_opportunity, find_opportunity_by_name, save_opportunity
+    from ode.engine.gate import evaluate_gate
+
+    opp = load_opportunity(opp_id) or find_opportunity_by_name(opp_id)
+    if not opp:
+        return _fail(f"Opportunity not found: {opp_id}")
+
+    last_verdict = opp.gate_log[-1]["verdict"] if opp.gate_log else None
+    experiments = getattr(opp, "experiments", [])
+    passed_experiments = [e for e in experiments if e.get("outcome") == "pass"]
+
+    if opp.stage == "SCREEN" and opp.scores:
+        scoring_dict = {
+            "percentage": opp.scores.get("_weighted_pct", 0),
+            "redline_violations": [],
+        }
+        result = evaluate_gate("SCREEN", scoring_result=scoring_dict)
+
+        # Prototype evidence override: if experiments passed and score >= 45
+        if passed_experiments and result["verdict"] == "MAYBE":
+            pct = scoring_dict["percentage"]
+            if pct >= 45:
+                result["verdict"] = "GO"
+                result["detail"] = (
+                    f"{len(passed_experiments)} prototype(s) passed — "
+                    f"overriding borderline score ({pct:.0f}/100)"
+                )
+    elif opp.stage == "ANALYZE":
+        result = evaluate_gate("ANALYZE",
+                               financials=opp.financials,
+                               regulatory=opp.regulatory)
+    else:
+        result = {"gate": opp.stage, "verdict": "UNKNOWN",
+                  "detail": "No re-evaluation rule for this stage"}
+
+    verdict_changed = result.get("verdict") != last_verdict
+    if verdict_changed and result["verdict"] in ("GO", "MAYBE", "KILL"):
+        opp.gate_log.append({
+            "gate": opp.stage,
+            "verdict": result["verdict"],
+            "score": result.get("score", 0),
+            "ts": _now_iso(),
+            "trigger": "manual_refresh",
+        })
+        opp.updated_at = _now_iso()
+        save_opportunity(opp)
+
+    return _ok({
+        "new_verdict": result["verdict"],
+        "previous_verdict": last_verdict,
+        "verdict_changed": verdict_changed,
+        "detail": result.get("detail", ""),
+        "passed_experiments": len(passed_experiments),
+    }, message=f"Gate: {last_verdict} → {result['verdict']}"
+       if verdict_changed else f"Gate unchanged: {result['verdict']}")
