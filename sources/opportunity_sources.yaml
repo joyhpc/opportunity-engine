@@ -188,6 +188,479 @@ sources:
       - Funding is not product-market fit.
       - News coverage can lag real market changes.
 
+  - id: youtube_data_api_search
+    label: YouTube Data API Search
+    status: planned
+    region: global
+    language:
+      - multi
+    access_method: official_api_key
+    layer: content_search_signal
+    adapter: planned
+    endpoint: "https://developers.google.com/youtube/v3/docs/search/list"
+    auth: api_key_or_oauth
+    default_enabled: false
+    freshness: near-real-time subject to quota
+    requires:
+      - Google Cloud project
+      - YouTube Data API quota
+      - approved API adapter
+    params:
+      - query
+      - published_after
+      - region_code
+      - order
+    strength_method: "video search presence plus public engagement fetched through follow-up video statistics"
+    best_for:
+      - video demand discovery
+      - creator economy
+      - tutorials and education
+      - consumer interest validation
+    limitations:
+      - Search ranking is not a complete platform sample.
+      - API quota can constrain broad scans.
+      - Engagement does not prove revenue.
+
+  - id: tiktok_research_api
+    label: TikTok Research API
+    status: planned
+    region: global
+    language:
+      - multi
+    access_method: official_api_research_approval
+    layer: short_video_signal
+    adapter: planned
+    endpoint: "https://developers.tiktok.com/doc/research-api/"
+    auth: approved_research_access
+    default_enabled: false
+    freshness: query dependent
+    requires:
+      - TikTok developer account
+      - Research API approval
+      - compliant research or analysis use case
+    params:
+      - query
+      - region
+      - created_after
+      - created_before
+    strength_method: "public video metadata under approved access; attention only, not revenue"
+    best_for:
+      - short-video trend discovery
+      - creator and consumer language
+      - international content-market comparison
+    limitations:
+      - Access is restricted and approval-based.
+      - Coverage may be incomplete for commercial opportunity discovery.
+      - Not suitable for scraping private or user-level data.
+
+  - id: instagram_graph_hashtag_api
+    label: Instagram Graph Hashtag API
+    status: planned
+    region: global
+    language:
+      - multi
+    access_method: official_api_business_auth
+    layer: social_content_signal
+    adapter: planned
+    endpoint: "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-hashtag"
+    auth: instagram_business_or_creator_auth
+    default_enabled: false
+    freshness: query dependent
+    requires:
+      - Meta developer app
+      - connected Instagram Business or Creator account
+      - approved permissions
+    params:
+      - hashtag
+      - top_or_recent
+      - time_range
+    strength_method: "hashtag media presence and public engagement fields where available"
+    best_for:
+      - visual commerce
+      - consumer trends
+      - creator content themes
+    limitations:
+      - Requires business/creator account setup and permissions.
+      - Hashtag search is not general full-text search.
+      - Platform ranking and available fields can change.
+
+  - id: meta_ads_library_api
+    label: Meta Ads Library API
+    status: planned
+    region: global
+    language:
+      - multi
+    access_method: official_api
+    layer: paid_demand_signal
+    adapter: planned
+    endpoint: "https://www.facebook.com/ads/library/api"
+    auth: developer_token
+    default_enabled: false
+    freshness: daily
+    requires:
+      - Meta developer access
+      - approved API adapter
+    params:
+      - query
+      - ad_reached_countries
+      - ad_active_status
+    strength_method: "advertiser persistence and creative volume; spend is often incomplete or estimated"
+    best_for:
+      - paid acquisition proof
+      - competitor messaging
+      - category monetization clues
+    limitations:
+      - Ad presence suggests budget, not profit.
+      - Commercial ad fields may be limited by jurisdiction and policy.
+      - Must avoid treating estimated spend as verified revenue.
+
+  - id: x_recent_search_api
+    label: X Recent Search API
+    status: planned
+    region: global
+    language:
+      - multi
+    access_method: official_api_paid_or_approved
+    layer: public_conversation_signal
+    adapter: planned
+    endpoint: "https://docs.x.com/x-api/posts/recent-search"
+    auth: bearer_token
+    default_enabled: false
+    freshness: recent posts
+    requires:
+      - X developer access
+      - API tier with search access
+    params:
+      - query
+      - start_time
+      - end_time
+      - max_results
+    strength_method: "conversation volume and recency; high noise unless filtered"
+    best_for:
+      - public sentiment
+      - founder and operator chatter
+      - launch and complaint detection
+    limitations:
+      - API access and pricing can change.
+      - Social buzz is not buyer demand.
+      - Needs careful spam and bot filtering.
+
+  - id: linkedin_marketing_api
+    label: LinkedIn Marketing API
+    status: planned
+    region: global
+    language:
+      - multi
+    access_method: official_api_partner_auth
+    layer: b2b_signal
+    adapter: planned
+    endpoint: "https://learn.microsoft.com/linkedin/marketing/"
+    auth: linkedin_developer_app_and_permissions
+    default_enabled: false
+    freshness: account dependent
+    requires:
+      - LinkedIn developer app
+      - approved marketing permissions
+    params:
+      - organization
+      - campaign
+      - time_range
+    strength_method: "B2B campaign and owned-page metrics when authorized"
+    best_for:
+      - B2B demand validation
+      - enterprise buyer language
+      - channel experiments
+    limitations:
+      - Mostly owned or authorized data.
+      - Broad public scraping is not registered.
+      - Access approval can be restrictive.
+
+  - id: producthunt_graphql
+    label: Product Hunt GraphQL API
+    status: planned
+    region: global
+    language:
+      - en
+    access_method: official_api
+    layer: launch_signal
+    adapter: planned
+    endpoint: "https://www.producthunt.com/v2/docs"
+    auth: developer_token
+    default_enabled: false
+    freshness: daily
+    requires:
+      - Product Hunt API token
+      - approved API adapter
+    params:
+      - posted_after
+      - topic
+      - votes_threshold
+    strength_method: "launch volume, votes, comments, makers, and topic clustering"
+    best_for:
+      - startup launches
+      - indie tools
+      - AI product categories
+    limitations:
+      - Launch attention is not revenue.
+      - Audience skews tech/startup.
+
+  - id: apple_itunes_search_api
+    label: Apple iTunes / App Store Search API
+    status: planned
+    region: global
+    language:
+      - multi
+    access_method: public_api
+    layer: app_market_signal
+    adapter: planned
+    endpoint: "https://developer.apple.com/library/archive/documentation/AudioVideo/Conceptual/iTuneSearchAPI/"
+    auth: none
+    default_enabled: false
+    freshness: query dependent
+    requires:
+      - approved API adapter
+    params:
+      - term
+      - country
+      - media
+      - entity
+    strength_method: "app presence, category, price, and metadata; rankings require separate source"
+    best_for:
+      - app category discovery
+      - paid app clues
+      - mobile competitor lookup
+    limitations:
+      - Search API is not a full ranking or revenue feed.
+      - Reviews and downloads are limited.
+
+  - id: google_play_developer_reviews
+    label: Google Play Developer Reviews API
+    status: planned
+    region: global
+    language:
+      - multi
+    access_method: official_api_owned_app_auth
+    layer: app_review_signal
+    adapter: planned
+    endpoint: "https://developers.google.com/android-publisher/api-ref/rest/v3/reviews/list"
+    auth: service_account_for_owned_apps
+    default_enabled: false
+    freshness: account dependent
+    requires:
+      - Google Play developer account
+      - owned app package name
+    params:
+      - package_name
+      - token
+      - max_results
+    strength_method: "owned-app review pain and retention signals"
+    best_for:
+      - owned app validation
+      - mobile user pain mining
+      - review-driven roadmap
+    limitations:
+      - Covers owned apps, not all Google Play apps.
+      - Not a broad market scanner by itself.
+
+  - id: amazon_product_advertising_api
+    label: Amazon Product Advertising API
+    status: planned
+    region: global
+    language:
+      - multi
+    access_method: official_affiliate_api
+    layer: ecommerce_signal
+    adapter: planned
+    endpoint: "https://webservices.amazon.com/paapi5/documentation/"
+    auth: associate_credentials
+    default_enabled: false
+    freshness: query dependent
+    requires:
+      - Amazon Associates account
+      - Product Advertising API credentials
+    params:
+      - keywords
+      - search_index
+      - marketplace
+    strength_method: "product availability, price, and review counts; revenue remains inferred"
+    best_for:
+      - ecommerce category discovery
+      - product price benchmarking
+      - physical product competition
+    limitations:
+      - Affiliate API terms restrict use cases and storage.
+      - Review count and rank do not prove seller revenue.
+
+  - id: g2_manual
+    label: G2 Manual Signals
+    status: manual
+    region: global
+    language:
+      - en
+    access_method: manual
+    layer: b2b_review_signal
+    adapter: ode.core.models.Signal
+    endpoint: "https://www.g2.com/"
+    auth: none
+    default_enabled: false
+    freshness: user supplied
+    requires:
+      - product URL or saved note
+    params:
+      - category
+      - product_url
+      - review_note
+    strength_method: user supplied review and category evidence
+    best_for:
+      - B2B pain mining
+      - competitor positioning
+      - category maturity checks
+    limitations:
+      - Manual-only in this project.
+      - Review platforms can be biased by vendor campaigns.
+
+  - id: capterra_manual
+    label: Capterra Manual Signals
+    status: manual
+    region: global
+    language:
+      - en
+    access_method: manual
+    layer: b2b_review_signal
+    adapter: ode.core.models.Signal
+    endpoint: "https://www.capterra.com/"
+    auth: none
+    default_enabled: false
+    freshness: user supplied
+    requires:
+      - product URL or saved note
+    params:
+      - category
+      - product_url
+      - review_note
+    strength_method: user supplied review and category evidence
+    best_for:
+      - SMB software pain
+      - buying criteria
+      - category alternatives
+    limitations:
+      - Manual-only.
+      - Review counts and ratings are not revenue proof.
+
+  - id: crunchbase_paid
+    label: Crunchbase Company and Funding Data
+    status: planned
+    region: global
+    language:
+      - en
+    access_method: paid_api
+    layer: funding_signal
+    adapter: planned
+    endpoint: "https://data.crunchbase.com/"
+    auth: subscription_required
+    default_enabled: false
+    freshness: daily to weekly
+    requires:
+      - paid subscription or export
+    params:
+      - organization
+      - category
+      - funding_date_range
+    strength_method: "funding and company formation signal; not revenue unless filings or financials exist"
+    best_for:
+      - startup ecosystem mapping
+      - competitor emergence
+      - investor interest
+    limitations:
+      - Funding is not revenue.
+      - Paid data source and licensing restrictions apply.
+
+  - id: sensor_tower_paid
+    label: Sensor Tower App Market Data
+    status: planned
+    region: global
+    language:
+      - multi
+    access_method: paid_api_or_export
+    layer: app_market_intelligence
+    adapter: planned
+    endpoint: "https://sensortower.com/"
+    auth: subscription_required
+    default_enabled: false
+    freshness: daily to monthly
+    requires:
+      - paid subscription or manual export
+    params:
+      - app_id
+      - category
+      - country
+      - time_range
+    strength_method: "estimated downloads and revenue; treated as estimate unless corroborated"
+    best_for:
+      - mobile app monetization clues
+      - category comparison
+      - competitor trajectory
+    limitations:
+      - Estimated data only.
+      - Must be corroborated before revenue claims.
+
+  - id: similarweb_paid
+    label: Similarweb Web Traffic Data
+    status: planned
+    region: global
+    language:
+      - multi
+    access_method: paid_api_or_export
+    layer: traffic_signal
+    adapter: planned
+    endpoint: "https://www.similarweb.com/"
+    auth: subscription_required
+    default_enabled: false
+    freshness: monthly
+    requires:
+      - paid subscription or manual export
+    params:
+      - domain
+      - country
+      - time_range
+    strength_method: "traffic estimate and channel mix; not revenue proof"
+    best_for:
+      - web competitor discovery
+      - acquisition channel clues
+      - market interest checks
+    limitations:
+      - Estimated traffic can be wrong for small sites.
+      - Needs conversion and pricing evidence to infer revenue.
+
+  - id: indiehackers_manual
+    label: Indie Hackers Manual Signals
+    status: manual
+    region: global
+    language:
+      - en
+    access_method: manual
+    layer: founder_revenue_story
+    adapter: ode.core.models.Signal
+    endpoint: "https://www.indiehackers.com/"
+    auth: none
+    default_enabled: false
+    freshness: user supplied
+    requires:
+      - story URL or saved note
+      - revenue claim extraction
+    params:
+      - founder
+      - story_url
+      - revenue_metric
+    strength_method: user supplied; founder self-reported revenue usually C unless corroborated
+    best_for:
+      - bootstrapped revenue stories
+      - small-team replicable patterns
+      - channel and pricing clues
+    limitations:
+      - Self-reported revenue needs corroboration.
+      - Survivorship bias is high.
+
   - id: cn_36kr_newsflash
     label: 36Kr Newsflash
     status: planned
@@ -910,6 +1383,297 @@ sources:
       - education and AI tool content
     limitations:
       - Content popularity is not direct willingness to pay.
+
+  - id: cn_kuaishou_open_platform
+    label: Kuaishou Open Platform
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: official_api_approved_scope
+    layer: short_video_signal
+    adapter: planned
+    endpoint: "https://open.kuaishou.com/platform/openApi"
+    auth: developer_app_and_approved_scope
+    default_enabled: false
+    freshness: account or endpoint dependent
+    requires:
+      - Kuaishou developer app
+      - approved API scope
+    params:
+      - keyword
+      - user_id
+      - item_id
+      - time_range
+    strength_method: "official short-video/account signals where approved; revenue requires separate proof"
+    best_for:
+      - China short-video demand
+      - creator economy
+      - lower-tier city consumer trends
+    limitations:
+      - Access and fields depend on approved platform capabilities.
+      - Not treated as active until an official adapter exists.
+
+  - id: cn_kuaishou_ecommerce_open_api
+    label: Kuaishou Ecommerce Open API
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: official_api_merchant_auth
+    layer: revenue_signal
+    adapter: planned
+    endpoint: "https://open.kuaishou.com/platform/openApi"
+    auth: merchant_authorization
+    default_enabled: false
+    freshness: account dependent
+    requires:
+      - authorized Kuaishou shop or service provider access
+      - approved ecommerce API scope
+    params:
+      - order_id
+      - item_id
+      - time_range
+    strength_method: "authorized orders and GMV fields if available; stronger than public engagement"
+    best_for:
+      - livestream commerce validation
+      - ecommerce revenue proof
+      - creator-shop opportunity checks
+    limitations:
+      - Merchant-scoped data only.
+      - Must redact buyer and payment-sensitive fields.
+
+  - id: cn_taobao_open_platform
+    label: Taobao / Tmall Open Platform
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: official_api_merchant_auth
+    layer: ecommerce_signal
+    adapter: planned
+    endpoint: "https://developer.alibaba.com/docs/api.htm"
+    auth: app_key_secret_and_merchant_authorization
+    default_enabled: false
+    freshness: account dependent
+    requires:
+      - Alibaba developer app
+      - merchant authorization or permitted API category
+    params:
+      - item_id
+      - shop_id
+      - order_time_range
+    strength_method: "authorized product/order data; market-wide revenue still requires corroboration"
+    best_for:
+      - China ecommerce categories
+      - product pricing
+      - seller tooling opportunities
+    limitations:
+      - Access is permission and merchant scoped.
+      - Marketplace-wide discovery may require paid or partner data.
+
+  - id: cn_jd_open_platform
+    label: JD Open Platform
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: official_api_merchant_auth
+    layer: ecommerce_signal
+    adapter: planned
+    endpoint: "https://open.jd.com/"
+    auth: app_credentials_and_merchant_authorization
+    default_enabled: false
+    freshness: account dependent
+    requires:
+      - JD developer account
+      - merchant authorization or approved API access
+    params:
+      - sku_id
+      - shop_id
+      - order_time_range
+    strength_method: "authorized SKU/order data; public product signals are weaker"
+    best_for:
+      - durable goods and retail categories
+      - merchant SaaS opportunities
+      - product price and availability checks
+    limitations:
+      - Merchant-scoped unless partner access exists.
+      - Not a broad public scraper.
+
+  - id: cn_pdd_open_platform
+    label: Pinduoduo Open Platform
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: official_api_merchant_or_affiliate_auth
+    layer: ecommerce_signal
+    adapter: planned
+    endpoint: "https://open.pinduoduo.com/"
+    auth: app_credentials_and_authorization
+    default_enabled: false
+    freshness: account dependent
+    requires:
+      - Pinduoduo developer access
+      - merchant or affiliate authorization
+    params:
+      - goods_id
+      - mall_id
+      - order_time_range
+    strength_method: "authorized goods/order or affiliate data; revenue needs verification"
+    best_for:
+      - price-sensitive consumer demand
+      - social commerce
+      - supply-chain and merchant tooling
+    limitations:
+      - Access scope determines fields.
+      - Affiliate signals can overstate actual merchant profitability.
+
+  - id: cn_1688_open_platform
+    label: 1688 Open Platform
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: official_api_supplier_auth
+    layer: b2b_supply_signal
+    adapter: planned
+    endpoint: "https://open.1688.com/"
+    auth: app_credentials_and_authorization
+    default_enabled: false
+    freshness: account dependent
+    requires:
+      - 1688 developer access
+      - supplier or buyer authorization where required
+    params:
+      - keyword
+      - offer_id
+      - category
+    strength_method: "supplier availability, price, MOQ, and category depth"
+    best_for:
+      - supply-side validation
+      - physical product sourcing
+      - B2B trade opportunities
+    limitations:
+      - Supply does not prove demand.
+      - Terms and access scope must be checked before automation.
+
+  - id: cn_douyin_ecommerce_open_api
+    label: Douyin Ecommerce Open API
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: official_api_merchant_auth
+    layer: revenue_signal
+    adapter: planned
+    endpoint: "https://open.douyin.com/"
+    auth: merchant_authorization_and_approved_scope
+    default_enabled: false
+    freshness: account dependent
+    requires:
+      - Douyin ecommerce merchant or service-provider access
+      - approved API scope
+    params:
+      - product_id
+      - order_id
+      - time_range
+    strength_method: "authorized shop order/product data; stronger proof than video engagement"
+    best_for:
+      - content commerce revenue proof
+      - product category validation
+      - merchant workflow opportunities
+    limitations:
+      - Merchant-scoped and permission-scoped.
+      - Must separate GMV, paid orders, refunds, and net revenue.
+
+  - id: cn_meituan_open_platform
+    label: Meituan Open Platform
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: official_api_merchant_auth
+    layer: local_services_signal
+    adapter: planned
+    endpoint: "https://developer.meituan.com/"
+    auth: app_credentials_and_merchant_authorization
+    default_enabled: false
+    freshness: account dependent
+    requires:
+      - Meituan developer or merchant access
+      - approved API category
+    params:
+      - shop_id
+      - product_id
+      - order_time_range
+    strength_method: "authorized local-service order and merchant metrics when available"
+    best_for:
+      - local services
+      - restaurants and offline commerce
+      - merchant operations pain
+    limitations:
+      - Access is merchant or partner scoped.
+      - Local service demand varies strongly by city.
+
+  - id: cn_ele_me_open_platform
+    label: Ele.me Open Platform
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: official_api_merchant_auth
+    layer: local_services_signal
+    adapter: planned
+    endpoint: "https://open.shop.ele.me/"
+    auth: merchant_authorization
+    default_enabled: false
+    freshness: account dependent
+    requires:
+      - Ele.me merchant or service-provider access
+      - approved API scope
+    params:
+      - shop_id
+      - order_time_range
+      - sku_id
+    strength_method: "authorized order and operational data for merchant-side validation"
+    best_for:
+      - food delivery operations
+      - local merchant tooling
+      - price and promotion experiments
+    limitations:
+      - Merchant-scoped data only.
+      - Operational volume does not automatically imply attractive margins.
+
+  - id: cn_dewu_manual
+    label: Dewu Manual Signals
+    status: manual
+    region: china
+    language:
+      - zh-CN
+    access_method: manual
+    layer: consumer_marketplace_signal
+    adapter: ode.core.models.Signal
+    endpoint: "https://www.dewu.com/"
+    auth: user_account
+    default_enabled: false
+    freshness: user supplied
+    requires:
+      - product URL or saved note
+      - manual price and demand snapshot
+    params:
+      - product_url
+      - category
+      - price_snapshot
+    strength_method: user supplied marketplace snapshot
+    best_for:
+      - youth consumer products
+      - resale and authenticity pain
+      - sneaker/fashion/collectible demand
+    limitations:
+      - Manual-only in this project.
+      - Marketplace prices can be volatile and manipulated.
 
   - id: cn_douban_group_manual
     label: Douban Group Manual Signals

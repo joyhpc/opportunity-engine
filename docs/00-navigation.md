@@ -19,6 +19,7 @@ python3 -m ode eval <opp_id> --tam 1e9 --arpu 29.99
 python3 -m ode report <opp_id> --print
 python3 -m ode insights <opp_id>
 python3 -m ode lens <opp_id> --profile examples/profiles/open_founder_profile.json
+python3 -m ode cases --region china --min-grade B
 python3 -m ode portfolio
 ```
 
@@ -34,6 +35,7 @@ python3 -m ode portfolio
 | 02 | [AI Storybook Product Plan](02-ai-storybook-product-plan.md) | 原型产品计划 | storybook prototype |
 | 03 | [Project Structure](03-project-structure.md) | 仓库层级、边界规则、清理路线 | ode/imports/prototypes/tests/tools |
 | 04 | [Data Sources](04-data-sources.md) | 机会发现数据源注册表和扫描边界 | HN、Reddit、Google Trends、中国国内源 |
+| 05 | [Revenue Cases](05-revenue-cases.md) | 赚钱案例精筛和真实性验证 | evidence grades、case fit、verification |
 | — | [Import Integration](import-integration.md) | opportunity-detector 导入契约 | schema、golden example、validator |
 
 ---
@@ -67,6 +69,7 @@ python3 -m ode portfolio
 | Reframe | [`ode/heuristics/reframe.py`](../ode/heuristics/reframe.py) | `ode insights` | MAYBE/KILL → pivot strategies |
 | Synthesize | [`ode/heuristics/synthesize.py`](../ode/heuristics/synthesize.py) | `ode insights` / report | Contradiction + blind spot detection |
 | Founder Fit Lens | [`ode/heuristics/fit_lens.py`](../ode/heuristics/fit_lens.py) | `ode lens` | Soft sorting: opportunity score + founder fit + discovery value |
+| Revenue Cases | [`ode/heuristics/revenue_cases.py`](../ode/heuristics/revenue_cases.py) | `ode cases` | Revenue evidence grading, fit sorting, and verification steps |
 
 ### Tools
 
@@ -99,6 +102,7 @@ python3 -m ode portfolio
 |------|---------|
 | [`flows/opportunity_7stage.yaml`](../flows/opportunity_7stage.yaml) | Pipeline stage definitions, dependencies, gate rules |
 | [`examples/profiles/open_founder_profile.json`](../examples/profiles/open_founder_profile.json) | Open default founder profile for soft fit sorting |
+| [`examples/revenue_cases/seed_cases.json`](../examples/revenue_cases/seed_cases.json) | Seed revenue cases for scan, filter, verify, and fit workflow |
 | [`sources/opportunity_sources.yaml`](../sources/opportunity_sources.yaml) | Registered active, optional, utility, manual, and planned discovery sources |
 | [`requirements.txt`](../requirements.txt) | Python dependencies |
 
@@ -107,7 +111,7 @@ python3 -m ode portfolio
 ## Test Suite
 
 ```bash
-python3 -m pytest tests/ -v    # 121 tests, < 1s
+python3 -m pytest tests/ -v    # 126 tests, < 2s
 ```
 
 | Test File | Tests | Coverage |
@@ -118,8 +122,9 @@ python3 -m pytest tests/ -v    # 121 tests, < 1s
 | [`tests/test_heuristics.py`](../tests/test_heuristics.py) | 25 | explore, bridge, reframe, synthesize |
 | [`tests/test_import_integration.py`](../tests/test_import_integration.py) | 2 | imported detector assets and closed-loop plan contract |
 | [`tests/test_project_structure.py`](../tests/test_project_structure.py) | 3 | repository hierarchy boundaries and artifact tracking |
+| [`tests/test_revenue_cases.py`](../tests/test_revenue_cases.py) | 4 | revenue evidence grading, filtering, service integration, custom case files |
 | [`tests/test_service.py`](../tests/test_service.py) | 43 | service API, experiments, actuals, gate refresh |
-| [`tests/test_source_registry.py`](../tests/test_source_registry.py) | 7 | source registry, region filter, runtime source ids, restricted platform sources, scanner source_id |
+| [`tests/test_source_registry.py`](../tests/test_source_registry.py) | 8 | source registry, region filter, runtime source ids, mainstream/restricted platform sources, scanner source_id |
 
 ---
 

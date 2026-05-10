@@ -227,6 +227,19 @@ def cmd_sources(args):
     print(result["data"]["formatted"])
 
 
+def cmd_cases(args):
+    """Analyze revenue-proven reference cases."""
+    profile = _load_profile_arg(args)
+    result = asyncio.run(service.analyze_revenue_cases(
+        path=args.path,
+        profile=profile,
+        region=args.region,
+        min_grade=args.min_grade,
+        top=args.top,
+    ))
+    print(result["data"]["formatted"])
+
+
 def cmd_portfolio(args):
     """Show portfolio view."""
     result = asyncio.run(service.get_portfolio())
@@ -357,6 +370,7 @@ COMMANDS = {
     "report": cmd_report,
     "status": cmd_status,
     "sources": cmd_sources,
+    "cases": cmd_cases,
     "portfolio": cmd_portfolio,
     "compare": cmd_compare,
     "explore": cmd_explore,

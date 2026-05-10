@@ -47,7 +47,10 @@ python3 -m ode insights <opp_id>
 # 7. 画像镜头：开放发现后的软排序，不直接 kill 机会
 python3 -m ode lens <opp_id> --profile examples/profiles/open_founder_profile.json
 
-# 8. 组合视图
+# 8. 赚钱案例：先看谁已经赚到钱，再验真和筛选
+python3 -m ode cases --region china --min-grade B
+
+# 9. 组合视图
 python3 -m ode portfolio
 ```
 
@@ -67,6 +70,7 @@ python3 -m ode portfolio
 | `insights` | 矛盾/盲区/转型建议 | `ode insights <id>` |
 | `lens` | Founder Fit Lens 软排序 | `ode lens <id> --profile examples/profiles/open_founder_profile.json` |
 | `sources` | 查看机会发现数据源注册表 | `ode sources --region china` |
+| `cases` | 分析赚钱案例、证据等级和适配度 | `ode cases --region china --min-grade B` |
 | `portfolio` | 组合对比视图 | `ode portfolio` |
 | `compare` | 并排对比机会 | `ode compare "id1,id2"` |
 | `status` | ODE 系统状态 | `ode status` |
@@ -108,7 +112,7 @@ python3 -m ode portfolio
 | `prototypes/` | 原型实验区，不被运行时代码直接依赖 |
 
 详细层级和整理规则见 [docs/03-project-structure.md](docs/03-project-structure.md)。
-数据源注册表和扫描边界见 [docs/04-data-sources.md](docs/04-data-sources.md)，包括中国国内源。
+数据源注册表和扫描边界见 [docs/04-data-sources.md](docs/04-data-sources.md)，包括中国国内源。赚钱案例的精筛和验真流程见 [docs/05-revenue-cases.md](docs/05-revenue-cases.md)。
 
 机会筛选采用 “开放发现 + 延迟判断”：
 
@@ -163,6 +167,7 @@ ODE 的核心差异化：不仅评估，还启发。
 | **reframe** | MAYBE/KILL → 具体转型策略 | `ode insights <id>` |
 | **synthesize** | 交叉数据矛盾检测 + 盲区发现 | `ode insights <id>` / report 自动附加 |
 | **fit_lens** | 机会质量 + 创始人适配 + 发现价值 → 软排序 | `ode lens <id>` |
+| **revenue_cases** | 赚钱案例 → 证据评级 + 适配度 + 验真动作 | `ode cases` |
 
 详见 [docs/01-heuristic-design.md](docs/01-heuristic-design.md)
 
@@ -182,7 +187,7 @@ ODE 的核心差异化：不仅评估，还启发。
 ## Test Suite
 
 ```bash
-python3 -m pytest tests/ -v    # 121 tests
+python3 -m pytest tests/ -v    # 126 tests
 ```
 
 | Test File | Tests | Coverage |
@@ -193,8 +198,9 @@ python3 -m pytest tests/ -v    # 121 tests
 | `tests/test_heuristics.py` | 25 | 启发模块：explore, bridge, reframe, synthesize |
 | `tests/test_import_integration.py` | 2 | 外部导入素材到 ODE 七阶段计划的契约 |
 | `tests/test_project_structure.py` | 3 | 仓库层级边界、运行产物追踪检查 |
+| `tests/test_revenue_cases.py` | 4 | 赚钱案例证据评级、筛选、service 接入、自定义案例文件 |
 | `tests/test_service.py` | 43 | service layer、实验记录、实际财务数据、gate refresh |
-| `tests/test_source_registry.py` | 7 | 数据源注册表、地区过滤、runtime source ids、受限平台源、scanner source_id |
+| `tests/test_source_registry.py` | 8 | 数据源注册表、地区过滤、runtime source ids、主流/受限平台源、scanner source_id |
 
 ---
 

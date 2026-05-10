@@ -34,6 +34,21 @@ ODE 的机会发现分两层：
 
 Planned sources are intentionally visible but not counted as scanned until an adapter exists and tests pass.
 
+## Mainstream Coverage Map
+
+Mainstream platforms are covered first as a registry map, then promoted to active scanners only after access, compliance, and tests are clear.
+
+| Area | Registered Sources | Runtime Status |
+|------|--------------------|----------------|
+| Global video/social | `youtube_data_api_search`, `tiktok_research_api`, `instagram_graph_hashtag_api`, `x_recent_search_api` | planned |
+| Global paid demand | `meta_ads_library_api`, `amazon_product_advertising_api`, `linkedin_marketing_api` | planned |
+| Global launches/apps | `producthunt_graphql`, `apple_itunes_search_api`, `google_play_developer_reviews` | planned |
+| Global market intelligence | `crunchbase_paid`, `sensor_tower_paid`, `similarweb_paid`, `g2_manual`, `capterra_manual`, `indiehackers_manual` | planned/manual |
+| China content/social | `cn_douyin_video_search_api`, `cn_kuaishou_open_platform`, `cn_bilibili_ranking`, `cn_weibo_hot_search`, `cn_zhihu_hot`, `cn_xiaohongshu_manual`, `cn_wechat_channels_assistant_manual` | planned/manual |
+| China ecommerce/local | `cn_taobao_open_platform`, `cn_jd_open_platform`, `cn_pdd_open_platform`, `cn_1688_open_platform`, `cn_douyin_ecommerce_open_api`, `cn_kuaishou_ecommerce_open_api`, `cn_meituan_open_platform`, `cn_ele_me_open_platform`, `cn_wechat_store_api`, `cn_xiaohongshu_ark_order_api` | planned |
+
+Coverage rule: a mainstream source can exist in the catalog even when it is not automated. The registry is the truth about coverage; `used_by_scan_workers` is the truth about what currently runs.
+
 ## China-Focused Sources
 
 这些源先进入注册表，不代表都已经自动扫描。国内平台公开 API 不稳定、登录限制多、平台条款差异大，所以先按可审计目录管理，后续逐个挑选成 adapter。
@@ -64,6 +79,16 @@ Planned sources are intentionally visible but not counted as scanned until an ad
 | `cn_xiaohongshu_miniapp_platform` | planned | owned Xiaohongshu mini-app funnel signals |
 | `cn_douyin_video_search_api` | planned | approved official Douyin video search signal |
 | `cn_douyin_open_video_data` | planned | authorized owned-account Douyin video metrics |
+| `cn_douyin_ecommerce_open_api` | planned | authorized Douyin shop order/revenue proof |
+| `cn_kuaishou_open_platform` | planned | official Kuaishou short-video/account signals |
+| `cn_kuaishou_ecommerce_open_api` | planned | authorized Kuaishou shop revenue proof |
+| `cn_taobao_open_platform` | planned | authorized Taobao/Tmall product/order signals |
+| `cn_jd_open_platform` | planned | authorized JD SKU/order signals |
+| `cn_pdd_open_platform` | planned | authorized Pinduoduo goods/order signals |
+| `cn_1688_open_platform` | planned | B2B supply-side signals |
+| `cn_meituan_open_platform` | planned | local service merchant/order signals |
+| `cn_ele_me_open_platform` | planned | food delivery merchant/order signals |
+| `cn_dewu_manual` | manual | youth marketplace price and demand snapshots |
 | `cn_wechat_channels_assistant_manual` | manual | owned WeChat Channels backend snapshots |
 | `cn_wechat_channels_miniapp_api` | planned | owned WeChat Channels / mini-program connection signals |
 | `cn_wechat_store_api` | planned | authorized WeChat Store order/revenue proof |

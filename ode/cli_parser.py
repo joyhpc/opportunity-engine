@@ -67,6 +67,23 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["global", "china"],
         help="Filter sources by region",
     )
+
+    p = sub.add_parser("cases", help="Analyze revenue-proven cases")
+    p.add_argument("--path", help="Revenue case JSON file")
+    p.add_argument(
+        "--region",
+        choices=["global", "china"],
+        help="Filter cases by region",
+    )
+    p.add_argument(
+        "--min-grade",
+        choices=["A", "B", "C", "D", "E"],
+        help="Minimum evidence grade to include",
+    )
+    p.add_argument("--top", type=int, help="Limit number of cases")
+    p.add_argument("--profile", help="Path to founder profile JSON")
+    p.add_argument("--profile-json", help="Inline founder profile JSON")
+
     sub.add_parser("portfolio", help="Show portfolio view")
 
     p = sub.add_parser("compare", help="Compare opportunities")

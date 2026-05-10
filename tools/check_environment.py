@@ -33,6 +33,7 @@ def main() -> int:
         "imports/opportunity-detector/subtasks/signal_capture.yaml",
         "examples/import_integration/opportunity_seed.json",
         "examples/profiles/open_founder_profile.json",
+        "examples/revenue_cases/seed_cases.json",
         "sources/opportunity_sources.yaml",
     ):
         path = ROOT / rel

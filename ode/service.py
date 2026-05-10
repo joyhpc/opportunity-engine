@@ -305,6 +305,35 @@ async def list_data_sources(status: str | None = None, region: str | None = None
 
 
 # ---------------------------------------------------------------------------
+# Revenue Cases
+# ---------------------------------------------------------------------------
+
+async def analyze_revenue_cases(*, path: str | None = None,
+                                profile: dict | None = None,
+                                region: str | None = None,
+                                min_grade: str | None = None,
+                                top: int | None = None) -> dict:
+    """Analyze revenue-proven cases without mixing them into trend scans."""
+    from ode.heuristics.revenue_cases import (
+        analyze_revenue_cases as _analyze_cases,
+        format_revenue_case_report,
+    )
+
+    analyses = _analyze_cases(
+        path=path,
+        profile=profile,
+        region=region,
+        min_grade=min_grade,
+        top=top,
+    )
+    return _ok({
+        "cases": [item.to_dict() for item in analyses],
+        "formatted": format_revenue_case_report(analyses),
+        "count": len(analyses),
+    })
+
+
+# ---------------------------------------------------------------------------
 # Compare
 # ---------------------------------------------------------------------------
 

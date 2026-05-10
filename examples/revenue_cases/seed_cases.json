@@ -1,0 +1,143 @@
+{
+  "schema_version": "1.0.0",
+  "cases": [
+    {
+      "id": "magnific_ai_creative_arr_202604",
+      "name": "Magnific / Freepik AI creative platform ARR",
+      "category": "AI creative tools",
+      "region": "global",
+      "published_at": "2026-04-28",
+      "claim": "Company press release says Magnific launched with $230M ARR, more than 1M paid subscribers, and adoption across 290+ enterprise teams.",
+      "metric_type": "arr",
+      "amount": 230000000,
+      "currency": "USD",
+      "period": "annual recurring revenue as of 2026-04",
+      "source_ids": ["funding_news", "indiehackers_manual"],
+      "evidence": [
+        {
+          "type": "company_pr",
+          "source_name": "PRNewswire / Freepik",
+          "url": "https://www.prnewswire.com/news-releases/freepik-becomes-magnific-hits-230m-arr-and-introduces-the-no-collar-creative-economy-302755376.html",
+          "notes": "Company-originated ARR and paid-subscriber claim."
+        }
+      ],
+      "fit_tags": ["AI creative", "subscription", "creator tools", "workflow", "software"],
+      "risk_flags": ["platform_dependency"],
+      "notes": "Useful pattern: AI-first creative workflow bundle plus existing asset library and paid subscriber base."
+    },
+    {
+      "id": "meitu_ai_productivity_arr_q1_2026",
+      "name": "Meitu AI productivity applications ARR",
+      "category": "AI productivity and design apps",
+      "region": "china",
+      "published_at": "2026-05-06",
+      "claim": "Meitu Q1 2026 business update reported AI-driven productivity applications ARR of about RMB 580M and 17.9M+ global paying subscribers.",
+      "metric_type": "arr",
+      "amount": 580000000,
+      "currency": "RMB",
+      "period": "ARR as of 2026-03",
+      "source_ids": ["cn_xiaohongshu_manual", "cn_baidu_index", "apple_itunes_search_api"],
+      "evidence": [
+        {
+          "type": "company_formal_disclosure",
+          "source_name": "Meitu Q1 2026 business update via Yahoo Finance",
+          "url": "https://finance.yahoo.com/markets/stocks/articles/meitu-reports-record-17-9m-140200780.html",
+          "notes": "Business update for a Hong Kong-listed company; still requires exchange filing cross-check."
+        },
+        {
+          "type": "independent_media",
+          "source_name": "Futu News",
+          "url": "https://news.futunn.com/post/72735921/meitu-reported-a-record-high-number-of-paid-users-in",
+          "notes": "Secondary media summary of the same Q1 business data."
+        }
+      ],
+      "fit_tags": ["AI workflows", "subscription", "consumer productivity", "China", "design tools"],
+      "risk_flags": ["platform_dependency"],
+      "notes": "Useful pattern: consumer photo/video audience converted into paid AI productivity tools."
+    },
+    {
+      "id": "runpod_gpu_cloud_arr_202601",
+      "name": "Runpod GPU cloud ARR",
+      "category": "AI infrastructure",
+      "region": "global",
+      "published_at": "2026-01-20",
+      "claim": "Runpod announced it surpassed $120M ARR and served more than 500K developers.",
+      "metric_type": "arr",
+      "amount": 120000000,
+      "currency": "USD",
+      "period": "annual recurring revenue as of 2026-01",
+      "source_ids": ["hackernews_topstories", "reddit_hot_rss"],
+      "evidence": [
+        {
+          "type": "company_pr",
+          "source_name": "Runpod",
+          "url": "https://www.runpod.io/press/runpod-ai-cloud-surpasses-120m-in-arr",
+          "notes": "Company-originated ARR claim."
+        },
+        {
+          "type": "independent_media",
+          "source_name": "TechCrunch",
+          "url": "https://techcrunch.com/2026/01/16/ai-cloud-startup-runpod-hits-120m-in-arr-and-it-started-with-a-reddit-post/",
+          "notes": "Independent media interview repeats ARR and origin story."
+        }
+      ],
+      "fit_tags": ["developer tools", "AI infrastructure", "API", "cloud", "software engineering"],
+      "risk_flags": ["heavy_capital"],
+      "notes": "Useful pattern: painful GPU operations packaged for developers; strong fit for tooling insight, weaker fit for direct replication because of capital intensity."
+    },
+    {
+      "id": "kling_ai_video_arr_202601",
+      "name": "Kling AI video generation revenue run-rate",
+      "category": "AI video generation",
+      "region": "china",
+      "published_at": "2026-01-13",
+      "claim": "Kuaishou announced Kling AI exceeded $20M monthly revenue in December 2025, implying $240M annualized revenue run-rate.",
+      "metric_type": "arr",
+      "amount": 240000000,
+      "currency": "USD",
+      "period": "annualized run-rate based on 2025-12 monthly revenue",
+      "source_ids": ["cn_kuaishou_open_platform", "cn_douyin_video_search_api"],
+      "evidence": [
+        {
+          "type": "company_formal_disclosure",
+          "source_name": "Kuaishou / PRNewswire",
+          "url": "https://www.prnewswire.com/news-releases/kling-ai-annualized-revenue-run-rate-hits-usd240-million-in-december-2025-302659847.html",
+          "notes": "Public-company announcement; verify against investor-relations filings."
+        },
+        {
+          "type": "independent_media",
+          "source_name": "Sina Finance",
+          "url": "https://finance.sina.com.cn/tech/2026-01-13/doc-inhheqff7271718.shtml",
+          "notes": "Secondary media coverage of the announcement."
+        }
+      ],
+      "fit_tags": ["AI video", "creative tools", "subscription", "API", "China"],
+      "risk_flags": ["platform_dependency"],
+      "notes": "Useful pattern: paid AI generation credits/subscriptions can monetize quickly when output quality and distribution align."
+    },
+    {
+      "id": "ironclad_ai_contracting_arr_202602",
+      "name": "Ironclad AI contracting ARR",
+      "category": "Legal tech / CLM",
+      "region": "global",
+      "published_at": "2026-02-12",
+      "claim": "Ironclad announced it surpassed $200M ARR as enterprise adoption of AI contracting increased.",
+      "metric_type": "arr",
+      "amount": 200000000,
+      "currency": "USD",
+      "period": "annual recurring revenue as of 2026-02",
+      "source_ids": ["funding_news", "linkedin_marketing_api"],
+      "evidence": [
+        {
+          "type": "company_pr",
+          "source_name": "PRNewswire / Ironclad",
+          "url": "https://www.prnewswire.com/news-releases/ironclad-surpasses-200-million-in-annual-recurring-revenue-entering-a-new-phase-of-ai-growth-302686054.html",
+          "notes": "Company-originated ARR claim."
+        }
+      ],
+      "fit_tags": ["enterprise SaaS", "AI workflows", "contracts", "B2B"],
+      "risk_flags": ["enterprise_procurement", "regulated"],
+      "notes": "Useful pattern: high-value document workflows with compliance pressure; slower sales motion for small builders."
+    }
+  ]
+}

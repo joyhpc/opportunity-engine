@@ -56,6 +56,10 @@ opportunity with `Opportunity Score`, `Founder Fit`, and `Discovery Value`, then
 classifies it as `Build Now`, `Validate Soon`, `Watch`, `Research`, or `Ignore`.
 It should not mutate or kill opportunities.
 
+`ode/heuristics/revenue_cases.py` is the revenue-case verification layer. It
+grades proof from A to E, separates revenue from funding/traffic/GMV, and
+returns fit-aware next actions without mutating opportunities.
+
 `ode/imports/` is an adapter boundary. It may read from top-level `imports/`,
 but normal engine modules should not directly depend on imported repository
 material.
@@ -70,6 +74,7 @@ material.
 6. Python caches, pytest caches, local IDE folders, and prototype outputs stay out of version control.
 7. New user-facing behavior should enter through `service.py` first, then be exposed by CLI/API/MCP as thin surfaces.
 8. Personal fit is a lens, not an early hard filter. High-discovery wildcard opportunities should remain visible.
+9. Revenue cases are reference material, not opportunities. They should become opportunities only after evidence grading and fit analysis.
 
 ## Current Cleanup Inventory
 

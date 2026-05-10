@@ -42,13 +42,16 @@ def test_region_filter_lists_china_sources():
     sources = list_sources(region="china")
     source_ids = {source.id for source in sources}
 
-    assert len(sources) >= 27
+    assert len(sources) >= 40
     assert "cn_36kr_newsflash" in source_ids
     assert "cn_v2ex_hot" in source_ids
     assert "cn_gov_policy" in source_ids
     assert "cn_xiaohongshu_ark_order_api" in source_ids
     assert "cn_douyin_video_search_api" in source_ids
     assert "cn_wechat_channels_assistant_manual" in source_ids
+    assert "cn_kuaishou_open_platform" in source_ids
+    assert "cn_taobao_open_platform" in source_ids
+    assert "cn_pdd_open_platform" in source_ids
     assert all(source.region == "china" for source in sources)
 
 
@@ -58,7 +61,7 @@ def test_service_region_filter_lists_china_sources():
     result = asyncio.run(service.list_data_sources(region="china"))
 
     assert result["ok"] is True
-    assert len(result["data"]["sources"]) >= 27
+    assert len(result["data"]["sources"]) >= 40
     assert all(source["region"] == "china" for source in result["data"]["sources"])
 
 
@@ -80,6 +83,29 @@ def test_restricted_social_platform_sources_are_not_runtime_sources():
     assert channels_manual.status == "manual"
     assert "cn_douyin_video_search_api" not in runtime_ids
     assert "cn_xiaohongshu_ark_order_api" not in runtime_ids
+
+
+def test_mainstream_global_sources_are_registered_but_not_runtime():
+    from ode.tools.source_registry import get_source, runtime_source_ids
+
+    runtime_ids = runtime_source_ids()
+    mainstream_ids = {
+        "youtube_data_api_search",
+        "tiktok_research_api",
+        "instagram_graph_hashtag_api",
+        "meta_ads_library_api",
+        "x_recent_search_api",
+        "producthunt_graphql",
+        "apple_itunes_search_api",
+        "amazon_product_advertising_api",
+    }
+
+    for source_id in mainstream_ids:
+        source = get_source(source_id)
+        assert source is not None
+        assert source.region == "global"
+        assert source.status in {"manual", "planned"}
+        assert source_id not in runtime_ids
 
 
 def test_scanner_signals_include_source_ids(monkeypatch):

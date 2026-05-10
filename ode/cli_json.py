@@ -28,6 +28,13 @@ def run_json_mode(args) -> None:
             status=getattr(args, "status", None),
             region=getattr(args, "region", None),
         )),
+        "cases": lambda: asyncio.run(service.analyze_revenue_cases(
+            path=getattr(args, "path", None),
+            profile=_load_profile_arg(args),
+            region=getattr(args, "region", None),
+            min_grade=getattr(args, "min_grade", None),
+            top=getattr(args, "top", None),
+        )),
         "portfolio": lambda: asyncio.run(service.get_portfolio()),
         "insights": lambda: asyncio.run(service.get_insights(args.opp_id)),
         "lens": lambda: asyncio.run(service.apply_lens(
