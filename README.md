@@ -44,7 +44,10 @@ python3 -m ode report <opp_id> --stage screen --print
 # 6. 洞察：矛盾检测 + 盲区分析 + 转型建议
 python3 -m ode insights <opp_id>
 
-# 7. 组合视图
+# 7. 画像镜头：开放发现后的软排序，不直接 kill 机会
+python3 -m ode lens <opp_id> --profile examples/profiles/open_founder_profile.json
+
+# 8. 组合视图
 python3 -m ode portfolio
 ```
 
@@ -62,6 +65,7 @@ python3 -m ode portfolio
 | `eval` | 多维度评估 + 门禁 | `ode eval <id> --depth screen` |
 | `report` | 生成 Markdown 报告 | `ode report <id> --print` |
 | `insights` | 矛盾/盲区/转型建议 | `ode insights <id>` |
+| `lens` | Founder Fit Lens 软排序 | `ode lens <id> --profile examples/profiles/open_founder_profile.json` |
 | `portfolio` | 组合对比视图 | `ode portfolio` |
 | `compare` | 并排对比机会 | `ode compare "id1,id2"` |
 | `status` | ODE 系统状态 | `ode status` |
@@ -103,6 +107,14 @@ python3 -m ode portfolio
 | `prototypes/` | 原型实验区，不被运行时代码直接依赖 |
 
 详细层级和整理规则见 [docs/03-project-structure.md](docs/03-project-structure.md)。
+
+机会筛选采用 “开放发现 + 延迟判断”：
+
+```
+Opportunity Score + Founder Fit + Discovery Value → Build Now / Validate Soon / Watch / Research / Ignore
+```
+
+Founder Fit Lens 是软排序，不是早期硬过滤；高 Discovery Value 的异类机会会进入 Watch，而不是被过早丢弃。
 
 ---
 
@@ -148,6 +160,7 @@ ODE 的核心差异化：不仅评估，还启发。
 | **bridge** | 信号 → 评分自动推断（18项免手动） | `ode eval`（无 --scores 时自动触发） |
 | **reframe** | MAYBE/KILL → 具体转型策略 | `ode insights <id>` |
 | **synthesize** | 交叉数据矛盾检测 + 盲区发现 | `ode insights <id>` / report 自动附加 |
+| **fit_lens** | 机会质量 + 创始人适配 + 发现价值 → 软排序 | `ode lens <id>` |
 
 详见 [docs/01-heuristic-design.md](docs/01-heuristic-design.md)
 
@@ -167,13 +180,14 @@ ODE 的核心差异化：不仅评估，还启发。
 ## Test Suite
 
 ```bash
-python3 -m pytest tests/ -v    # 110 tests
+python3 -m pytest tests/ -v    # 114 tests
 ```
 
 | Test File | Tests | Coverage |
 |-----------|-------|----------|
 | `tests/test_cli_surface.py` | 4 | CLI 入口拆分、parser 命令集合、JSON/text 模式 |
 | `tests/test_eldermind.py` | 33 | 核心模块：models, store, scorer, financials, gate, pipeline, cache, CLI |
+| `tests/test_fit_lens.py` | 4 | Founder Fit Lens 分类、异类机会保护、service 接入 |
 | `tests/test_heuristics.py` | 25 | 启发模块：explore, bridge, reframe, synthesize |
 | `tests/test_import_integration.py` | 2 | 外部导入素材到 ODE 七阶段计划的契约 |
 | `tests/test_project_structure.py` | 3 | 仓库层级边界、运行产物追踪检查 |

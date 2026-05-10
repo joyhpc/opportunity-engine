@@ -70,6 +70,11 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("insights", help="Generate insights for an opportunity")
     p.add_argument("opp_id", help="Opportunity ID or name")
 
+    p = sub.add_parser("lens", help="Apply Founder Fit Lens to an opportunity")
+    p.add_argument("opp_id", help="Opportunity ID or name")
+    p.add_argument("--profile", help="Path to founder profile JSON")
+    p.add_argument("--profile-json", help="Inline founder profile JSON")
+
     p = sub.add_parser("experiment", help="Record a prototype iteration")
     p.add_argument("opp_id", help="Opportunity ID or name")
     p.add_argument("--version", required=True, help="Version label (e.g., v1, v2)")

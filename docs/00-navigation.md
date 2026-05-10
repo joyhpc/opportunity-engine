@@ -18,6 +18,7 @@ python3 -m ode scan --keywords "a,b"
 python3 -m ode eval <opp_id> --tam 1e9 --arpu 29.99
 python3 -m ode report <opp_id> --print
 python3 -m ode insights <opp_id>
+python3 -m ode lens <opp_id> --profile examples/profiles/open_founder_profile.json
 python3 -m ode portfolio
 ```
 
@@ -42,7 +43,7 @@ python3 -m ode portfolio
 
 | Module | Path | Description |
 |--------|------|-------------|
-| CLI | [`ode/cli.py`](../ode/cli.py) | 11 subcommands: explore, create, scan, eval, report, insights, ... |
+| CLI | [`ode/cli.py`](../ode/cli.py) | Thin entrypoint over parser, handlers, JSON mode |
 | Claude Skill | [`ode/integrations/claude_skill.py`](../ode/integrations/claude_skill.py) | `/ode` Claude Code skill handler |
 | MCP Server | [`ode/integrations/mcp_server.py`](../ode/integrations/mcp_server.py) | MCP tool registration (Phase 3 stub) |
 | pt Bridge | [`ode/integrations/pt_bridge.py`](../ode/integrations/pt_bridge.py) | project-tracker sync on opportunity graduation |
@@ -64,6 +65,7 @@ python3 -m ode portfolio
 | Bridge | [`ode/heuristics/bridge.py`](../ode/heuristics/bridge.py) | `ode eval` (auto) | 18-criterion score auto-inference |
 | Reframe | [`ode/heuristics/reframe.py`](../ode/heuristics/reframe.py) | `ode insights` | MAYBE/KILL → pivot strategies |
 | Synthesize | [`ode/heuristics/synthesize.py`](../ode/heuristics/synthesize.py) | `ode insights` / report | Contradiction + blind spot detection |
+| Founder Fit Lens | [`ode/heuristics/fit_lens.py`](../ode/heuristics/fit_lens.py) | `ode lens` | Soft sorting: opportunity score + founder fit + discovery value |
 
 ### Tools
 
@@ -94,6 +96,7 @@ python3 -m ode portfolio
 | File | Purpose |
 |------|---------|
 | [`flows/opportunity_7stage.yaml`](../flows/opportunity_7stage.yaml) | Pipeline stage definitions, dependencies, gate rules |
+| [`examples/profiles/open_founder_profile.json`](../examples/profiles/open_founder_profile.json) | Open default founder profile for soft fit sorting |
 | [`requirements.txt`](../requirements.txt) | Python dependencies |
 
 ---
@@ -101,13 +104,14 @@ python3 -m ode portfolio
 ## Test Suite
 
 ```bash
-python3 -m pytest tests/ -v    # 110 tests, < 1s
+python3 -m pytest tests/ -v    # 114 tests, < 1s
 ```
 
 | Test File | Tests | Coverage |
 |-----------|-------|----------|
 | [`tests/test_cli_surface.py`](../tests/test_cli_surface.py) | 4 | CLI entrypoint split, parser command set, JSON/text modes |
 | [`tests/test_eldermind.py`](../tests/test_eldermind.py) | 33 | models, store, scorer, financials, gate, pipeline, cache, CLI |
+| [`tests/test_fit_lens.py`](../tests/test_fit_lens.py) | 4 | Founder Fit Lens classification, wildcard protection, service integration |
 | [`tests/test_heuristics.py`](../tests/test_heuristics.py) | 25 | explore, bridge, reframe, synthesize |
 | [`tests/test_import_integration.py`](../tests/test_import_integration.py) | 2 | imported detector assets and closed-loop plan contract |
 | [`tests/test_project_structure.py`](../tests/test_project_structure.py) | 3 | repository hierarchy boundaries and artifact tracking |

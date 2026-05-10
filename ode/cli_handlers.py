@@ -278,6 +278,20 @@ def cmd_insights(args):
         print(format_reframe_report(d["reframe"]))
 
 
+def cmd_lens(args):
+    """Apply Founder Fit Lens to an opportunity."""
+    from ode.heuristics.fit_lens import LensResult, format_lens_report
+
+    profile = _load_profile_arg(args)
+    result = asyncio.run(service.apply_lens(args.opp_id, profile=profile))
+    if not result["ok"]:
+        print(result["message"], file=sys.stderr)
+        sys.exit(1)
+
+    lens = LensResult(**result["data"]["lens"])
+    print(format_lens_report(lens))
+
+
 def cmd_experiment(args):
     """Record a prototype iteration."""
     metrics = json.loads(args.metrics) if args.metrics else None
@@ -340,6 +354,7 @@ COMMANDS = {
     "compare": cmd_compare,
     "explore": cmd_explore,
     "insights": cmd_insights,
+    "lens": cmd_lens,
     "experiment": cmd_experiment,
     "record-actuals": cmd_record_actuals,
     "refresh-gate": cmd_refresh_gate,
@@ -360,3 +375,24 @@ def run_command(args) -> None:
         raise ValueError(f"Unknown command: {args.command}")
 
     cmd_func(args)
+
+
+def _load_profile_arg(args) -> dict | None:
+    if getattr(args, "profile_json", None):
+        try:
+            return json.loads(args.profile_json)
+        except json.JSONDecodeError as exc:
+            print(f"Invalid JSON for --profile-json: {exc}", file=sys.stderr)
+            sys.exit(1)
+
+    if getattr(args, "profile", None):
+        try:
+            return json.loads(Path(args.profile).read_text(encoding="utf-8"))
+        except OSError as exc:
+            print(f"Cannot read --profile: {exc}", file=sys.stderr)
+            sys.exit(1)
+        except json.JSONDecodeError as exc:
+            print(f"Invalid profile JSON: {exc}", file=sys.stderr)
+            sys.exit(1)
+
+    return None

@@ -60,6 +60,7 @@ def test_parser_exposes_expected_commands():
         "compare",
         "explore",
         "insights",
+        "lens",
         "experiment",
         "record-actuals",
         "refresh-gate",

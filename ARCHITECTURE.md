@@ -74,7 +74,7 @@
 
 | Module | Path | Description |
 |--------|------|-------------|
-| CLI | `ode/cli.py` | 11 subcommands, argparse-based |
+| CLI | `ode/cli.py` | Thin entry point over parser, handlers, and JSON mode |
 | Claude Skill | `ode/integrations/claude_skill.py` | `/ode` skill handler for Claude Code |
 | MCP Server | `ode/integrations/mcp_server.py` | MCP tool registration (Phase 3) |
 | API/Web | `ode/api/`, `ode/web/` | FastAPI + dashboard (Phase 3) |
@@ -96,6 +96,7 @@
 | bridge | `ode/heuristics/bridge.py` | `ode eval` (auto) | Signal → 18-criterion score inference with confidence levels |
 | reframe | `ode/heuristics/reframe.py` | `ode insights` | MAYBE/KILL → concrete pivot strategies per weak dimension |
 | synthesize | `ode/heuristics/synthesize.py` | `ode insights` / report | Cross-data contradiction detection + blind spot analysis |
+| fit_lens | `ode/heuristics/fit_lens.py` | `ode lens` | Soft founder-fit sorting that preserves high-discovery wildcards |
 
 ### Tools
 
@@ -298,6 +299,7 @@ User types: /ode scan --keywords "AI,robotics"
 | Phase 4 | Done | Configuration externalization (YAML configs) |
 | Phase 5 | Done | Pipeline orchestration + JSON sidecar contracts |
 | Phase 6 | Done | Heuristic modules: explore, bridge, reframe, synthesize |
+| Phase 7 | Done | Founder Fit Lens: soft sorting without early hard filtering |
 
 ## Repository Structure
 

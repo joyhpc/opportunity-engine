@@ -1,0 +1,37 @@
+{
+  "strengths": [
+    "software engineering",
+    "AI workflows",
+    "systems thinking",
+    "rapid prototyping",
+    "strategic analysis"
+  ],
+  "constraints": [
+    "avoid heavy upfront capital",
+    "avoid long enterprise procurement before validation",
+    "validate within 30 days"
+  ],
+  "exploration_interests": [
+    "AI agents",
+    "developer tools",
+    "automation",
+    "knowledge systems",
+    "vertical SaaS",
+    "opportunity discovery"
+  ],
+  "channels": [
+    "GitHub",
+    "technical communities",
+    "founder networks",
+    "builder communities"
+  ],
+  "hard_exclusions": [
+    "illegal",
+    "fraud",
+    "weapon"
+  ],
+  "validation_window_days": 30,
+  "time_budget_hours_per_week": 10,
+  "capital_budget_usd": 5000,
+  "wildcard_reserve_pct": 25
+}

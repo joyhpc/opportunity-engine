@@ -397,6 +397,35 @@ async def get_insights(opp_id: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Founder Fit Lens
+# ---------------------------------------------------------------------------
+
+async def apply_lens(opp_id: str, *, profile: dict | None = None) -> dict:
+    """Apply the Founder Fit Lens without mutating the opportunity."""
+    from ode.core.store import load_opportunity, find_opportunity_by_name, list_signals
+    from ode.heuristics.fit_lens import FounderProfile, apply_fit_lens
+
+    opp = load_opportunity(opp_id) or find_opportunity_by_name(opp_id)
+    if not opp:
+        return _fail(f"Opportunity not found: {opp_id}")
+
+    founder = FounderProfile.from_dict(profile)
+    signals = [signal.to_dict() for signal in list_signals(opp.id)]
+    result = apply_fit_lens(
+        opportunity=opp.to_dict(),
+        signals=signals,
+        profile=founder,
+    )
+
+    return _ok({
+        "opportunity_id": opp.id,
+        "opportunity_name": opp.name,
+        "profile": founder.to_dict(),
+        "lens": result.to_dict(),
+    }, message=f"Lens recommendation: {result.recommendation}")
+
+
+# ---------------------------------------------------------------------------
 # Experiment tracking
 # ---------------------------------------------------------------------------
 

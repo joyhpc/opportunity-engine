@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from pathlib import Path
 
 from ode import service
 
@@ -25,6 +26,10 @@ def run_json_mode(args) -> None:
         "status": lambda: asyncio.run(service.get_status()),
         "portfolio": lambda: asyncio.run(service.get_portfolio()),
         "insights": lambda: asyncio.run(service.get_insights(args.opp_id)),
+        "lens": lambda: asyncio.run(service.apply_lens(
+            args.opp_id,
+            profile=_load_profile_arg(args),
+        )),
         "refresh-gate": lambda: asyncio.run(service.refresh_gate(args.opp_id)),
     }
     func = dispatch.get(args.command)
@@ -37,3 +42,11 @@ def run_json_mode(args) -> None:
         }
 
     print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+
+
+def _load_profile_arg(args) -> dict | None:
+    if getattr(args, "profile_json", None):
+        return json.loads(args.profile_json)
+    if getattr(args, "profile", None):
+        return json.loads(Path(args.profile).read_text(encoding="utf-8"))
+    return None
