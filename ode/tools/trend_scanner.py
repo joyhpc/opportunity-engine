@@ -54,6 +54,7 @@ def scan_google_trends(keywords: list[str], timeframe: str = "today 3-m",
             momentum = ((recent - earlier) / max(earlier, 1)) * 100
 
             results.append({
+                "source_id": "google_trends",
                 "source": "google_trends",
                 "keyword": kw,
                 "title": kw,
@@ -71,6 +72,7 @@ def scan_google_trends(keywords: list[str], timeframe: str = "today 3-m",
                     top_rising = related[kw]["rising"].head(5)
                     for _, row in top_rising.iterrows():
                         results.append({
+                            "source_id": "google_trends",
                             "source": "google_trends_rising",
                             "keyword": row["query"],
                             "title": row["query"],
@@ -117,6 +119,7 @@ def scan_hackernews(top_n: int = 30) -> list[dict]:
                     return None
                 score = item.get("score", 0)
                 return {
+                    "source_id": "hackernews_topstories",
                     "source": "hackernews",
                     "keyword": "",
                     "title": item.get("title", ""),
@@ -182,6 +185,7 @@ def scan_reddit(subreddits: list[str], limit: int = 10) -> list[dict]:
                 estimated_strength = "强" if position < 3 else "中" if position < 7 else "弱"
 
                 results.append({
+                    "source_id": "reddit_hot_rss",
                     "source": f"reddit/r/{sub}",
                     "keyword": "",
                     "title": title,

@@ -24,6 +24,9 @@ def run_json_mode(args) -> None:
         "list": lambda: asyncio.run(service.list_opportunities()),
         "show": lambda: asyncio.run(service.show_opportunity(args.opp_id)),
         "status": lambda: asyncio.run(service.get_status()),
+        "sources": lambda: asyncio.run(service.list_data_sources(
+            status=getattr(args, "status", None),
+        )),
         "portfolio": lambda: asyncio.run(service.get_portfolio()),
         "insights": lambda: asyncio.run(service.get_insights(args.opp_id)),
         "lens": lambda: asyncio.run(service.apply_lens(

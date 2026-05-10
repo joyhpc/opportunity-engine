@@ -9,6 +9,7 @@ opportunity-engine/
 ├── ode/                 # 正式产品包, CLI/service/engine/runtime code
 ├── flows/               # 可声明的业务流程和阶段定义
 ├── schemas/             # JSON schema and machine-checkable contracts
+├── sources/             # auditable opportunity discovery source catalog
 ├── examples/            # 可复现输入和 golden outputs
 ├── imports/             # 外部项目审计素材, not a second active app
 ├── prototypes/          # 原型和实验代码, not imported by runtime

@@ -56,6 +56,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--print", action="store_true", help="Print report to stdout")
 
     sub.add_parser("status", help="Show ODE status")
+    p = sub.add_parser("sources", help="List opportunity data sources")
+    p.add_argument(
+        "--status",
+        choices=["active", "optional", "utility", "manual", "planned"],
+        help="Filter sources by registry status",
+    )
     sub.add_parser("portfolio", help="Show portfolio view")
 
     p = sub.add_parser("compare", help="Compare opportunities")

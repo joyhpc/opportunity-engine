@@ -1,0 +1,189 @@
+schema_version: "1.0.0"
+sources:
+  - id: hackernews_topstories
+    label: Hacker News Top Stories
+    status: active
+    layer: trend_signal
+    adapter: ode.tools.trend_scanner.scan_hackernews
+    endpoint: "https://hacker-news.firebaseio.com/v0/topstories.json"
+    auth: none
+    default_enabled: false
+    freshness: near-real-time top stories
+    requires:
+      - hn_top > 0
+    params:
+      - hn_top
+    strength_method: "story score: strong > 200, medium > 50, otherwise weak"
+    best_for:
+      - developer tools
+      - infrastructure
+      - AI engineering
+      - technical early-adopter demand
+    limitations:
+      - Strong technical bias.
+      - Not representative of mainstream consumer demand.
+
+  - id: reddit_hot_rss
+    label: Reddit Hot RSS
+    status: active
+    layer: community_signal
+    adapter: ode.tools.trend_scanner.scan_reddit
+    endpoint: "https://www.reddit.com/r/{subreddit}/hot/.rss"
+    auth: none
+    default_enabled: false
+    freshness: subreddit hot feed
+    requires:
+      - subreddits
+    params:
+      - reddit
+    strength_method: "feed position estimate: top 3 strong, top 7 medium, otherwise weak"
+    best_for:
+      - pain mining
+      - community complaints
+      - user language
+      - early validation topics
+    limitations:
+      - RSS does not include exact vote/comment metrics.
+      - Needs carefully selected subreddits.
+      - Can be noisy or meme-driven.
+
+  - id: google_trends
+    label: Google Trends
+    status: optional
+    layer: search_interest
+    adapter: ode.tools.trend_scanner.scan_google_trends
+    endpoint: pytrends unofficial Google Trends client
+    auth: none
+    default_enabled: true
+    freshness: requested timeframe, default today 3-m
+    requires:
+      - keywords
+      - optional dependency pytrends
+    params:
+      - keywords
+      - timeframe
+      - geo
+    strength_method: recent interest versus earlier interest momentum
+    best_for:
+      - broad demand shifts
+      - timing validation
+      - keyword expansion
+    limitations:
+      - pytrends is unofficial and may break.
+      - Requires seed keywords, so it is not fully open discovery.
+      - Low-volume niche terms can be sparse.
+
+  - id: duckduckgo_instant_answer
+    label: DuckDuckGo Instant Answer
+    status: utility
+    layer: evidence_search
+    adapter: ode.tools.data_fetcher.fetch_web
+    endpoint: "https://api.duckduckgo.com/"
+    auth: none
+    default_enabled: false
+    freshness: query dependent
+    requires:
+      - query
+    params:
+      - query
+      - max_results
+    strength_method: not used for trend strength
+    best_for:
+      - future evidence gathering
+      - lightweight source discovery
+    limitations:
+      - Not called by scan workers today.
+      - Instant Answer API often returns sparse results.
+
+  - id: manual_signal
+    label: Manual Signal
+    status: manual
+    layer: human_curated_signal
+    adapter: ode.core.models.Signal
+    endpoint: local YAML store
+    auth: none
+    default_enabled: false
+    freshness: user supplied
+    requires:
+      - title
+      - source
+    params:
+      - title
+      - url
+      - strength
+      - keyword
+    strength_method: user supplied
+    best_for:
+      - interview notes
+      - paid commitments
+      - curated news and funding signals
+    limitations:
+      - Depends on human judgment.
+      - Needs source URL and notes to stay auditable.
+
+  - id: arxiv_recent
+    label: arXiv Recent Papers
+    status: planned
+    layer: research_signal
+    adapter: planned
+    endpoint: "https://export.arxiv.org/api/query"
+    auth: none
+    default_enabled: false
+    freshness: recent submissions
+    requires:
+      - query
+    params:
+      - query
+      - max_results
+    strength_method: planned
+    best_for:
+      - AI research inflection points
+      - early technical feasibility shifts
+    limitations:
+      - Research activity is not direct willingness to pay.
+
+  - id: github_trending
+    label: GitHub Trending / Repository Momentum
+    status: planned
+    layer: builder_signal
+    adapter: planned
+    endpoint: GitHub search or trending source
+    auth: optional
+    default_enabled: false
+    freshness: daily to weekly
+    requires:
+      - topic
+    params:
+      - topic
+      - language
+    strength_method: planned
+    best_for:
+      - developer adoption
+      - open-source momentum
+      - infrastructure opportunities
+    limitations:
+      - Stars can be vanity metrics.
+      - GitHub API limits may apply.
+
+  - id: funding_news
+    label: Funding and Launch News
+    status: planned
+    layer: market_signal
+    adapter: planned
+    endpoint: curated news feeds
+    auth: optional
+    default_enabled: false
+    freshness: daily to weekly
+    requires:
+      - query
+    params:
+      - query
+      - lookback_days
+    strength_method: planned
+    best_for:
+      - capital flow
+      - competitor emergence
+      - category timing
+    limitations:
+      - Funding is not product-market fit.
+      - News coverage can lag real market changes.

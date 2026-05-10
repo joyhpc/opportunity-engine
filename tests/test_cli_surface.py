@@ -56,6 +56,7 @@ def test_parser_exposes_expected_commands():
         "eval",
         "report",
         "status",
+        "sources",
         "portfolio",
         "compare",
         "explore",

@@ -32,6 +32,8 @@ def main() -> int:
         "imports/opportunity-detector/templates/opportunity_detector.yaml",
         "imports/opportunity-detector/subtasks/signal_capture.yaml",
         "examples/import_integration/opportunity_seed.json",
+        "examples/profiles/open_founder_profile.json",
+        "sources/opportunity_sources.yaml",
     ):
         path = ROOT / rel
         print(f"check={rel} exists={path.exists()}")

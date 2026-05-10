@@ -33,6 +33,7 @@ python3 -m ode portfolio
 | 01 | [Heuristic Design](01-heuristic-design.md) | 启发模块设计思路与应用笔记 | explore/bridge/reframe/synthesize |
 | 02 | [AI Storybook Product Plan](02-ai-storybook-product-plan.md) | 原型产品计划 | storybook prototype |
 | 03 | [Project Structure](03-project-structure.md) | 仓库层级、边界规则、清理路线 | ode/imports/prototypes/tests/tools |
+| 04 | [Data Sources](04-data-sources.md) | 机会发现数据源注册表和扫描边界 | HN、Reddit、Google Trends、planned sources |
 | — | [Import Integration](import-integration.md) | opportunity-detector 导入契约 | schema、golden example、validator |
 
 ---
@@ -72,6 +73,7 @@ python3 -m ode portfolio
 | Module | Path | Description |
 |--------|------|-------------|
 | Trend Scanner | [`ode/tools/trend_scanner.py`](../ode/tools/trend_scanner.py) | HN + Reddit + Google Trends signals |
+| Source Registry | [`ode/tools/source_registry.py`](../ode/tools/source_registry.py) | Auditable source catalog loaded from `sources/opportunity_sources.yaml` |
 | Market Sizer | [`ode/tools/market_sizer.py`](../ode/tools/market_sizer.py) | Top-down/bottom-up TAM/SAM/SOM |
 | Financial Model | [`ode/tools/financial_model.py`](../ode/tools/financial_model.py) | LTV/CAC, NPV, 36-month projections |
 | Opportunity Scorer | [`ode/tools/opportunity_scorer.py`](../ode/tools/opportunity_scorer.py) | YC/a16z 6-dim weighted scorecard |
@@ -97,6 +99,7 @@ python3 -m ode portfolio
 |------|---------|
 | [`flows/opportunity_7stage.yaml`](../flows/opportunity_7stage.yaml) | Pipeline stage definitions, dependencies, gate rules |
 | [`examples/profiles/open_founder_profile.json`](../examples/profiles/open_founder_profile.json) | Open default founder profile for soft fit sorting |
+| [`sources/opportunity_sources.yaml`](../sources/opportunity_sources.yaml) | Registered active, optional, utility, manual, and planned discovery sources |
 | [`requirements.txt`](../requirements.txt) | Python dependencies |
 
 ---
@@ -104,7 +107,7 @@ python3 -m ode portfolio
 ## Test Suite
 
 ```bash
-python3 -m pytest tests/ -v    # 114 tests, < 1s
+python3 -m pytest tests/ -v    # 118 tests, < 1s
 ```
 
 | Test File | Tests | Coverage |
@@ -116,6 +119,7 @@ python3 -m pytest tests/ -v    # 114 tests, < 1s
 | [`tests/test_import_integration.py`](../tests/test_import_integration.py) | 2 | imported detector assets and closed-loop plan contract |
 | [`tests/test_project_structure.py`](../tests/test_project_structure.py) | 3 | repository hierarchy boundaries and artifact tracking |
 | [`tests/test_service.py`](../tests/test_service.py) | 43 | service API, experiments, actuals, gate refresh |
+| [`tests/test_source_registry.py`](../tests/test_source_registry.py) | 4 | source registry, runtime source ids, scanner source_id |
 
 ---
 

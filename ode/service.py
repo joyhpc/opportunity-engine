@@ -286,6 +286,25 @@ async def get_portfolio() -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Data Sources
+# ---------------------------------------------------------------------------
+
+async def list_data_sources(status: str | None = None) -> dict:
+    from ode.tools.source_registry import format_source_catalog, list_sources, runtime_source_ids
+
+    sources = list_sources(status=status)
+    runtime_ids = runtime_source_ids()
+    return _ok({
+        "sources": [
+            {**source.to_dict(), "used_by_scan_workers": source.id in runtime_ids}
+            for source in sources
+        ],
+        "formatted": format_source_catalog(sources),
+        "runtime_source_ids": sorted(runtime_ids),
+    })
+
+
+# ---------------------------------------------------------------------------
 # Compare
 # ---------------------------------------------------------------------------
 

@@ -103,6 +103,7 @@
 | Module | Path | Description |
 |--------|------|-------------|
 | Trend Scanner | `ode/tools/trend_scanner.py` | Google Trends + HackerNews API + Reddit scan |
+| Source Registry | `ode/tools/source_registry.py` | Auditable source catalog from `sources/opportunity_sources.yaml` |
 | Market Sizer | `ode/tools/market_sizer.py` | Top-down / bottom-up TAM/SAM/SOM estimation |
 | Financial Model | `ode/tools/financial_model.py` | Unit economics (LTV/CAC), 36-month projections, NPV |
 | Opportunity Scorer | `ode/tools/opportunity_scorer.py` | YC/a16z 6-dimension weighted scorecard, redline mechanism |

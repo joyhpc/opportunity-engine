@@ -221,6 +221,12 @@ def cmd_status(args):
         print(f"\nCache: {cache['valid']} entries ({cache['expired']} expired)")
 
 
+def cmd_sources(args):
+    """List configured opportunity data sources."""
+    result = asyncio.run(service.list_data_sources(status=args.status))
+    print(result["data"]["formatted"])
+
+
 def cmd_portfolio(args):
     """Show portfolio view."""
     result = asyncio.run(service.get_portfolio())
@@ -350,6 +356,7 @@ COMMANDS = {
     "eval": cmd_eval,
     "report": cmd_report,
     "status": cmd_status,
+    "sources": cmd_sources,
     "portfolio": cmd_portfolio,
     "compare": cmd_compare,
     "explore": cmd_explore,
