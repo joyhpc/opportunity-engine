@@ -81,6 +81,8 @@ python3 -m ode portfolio
 
 三层扁平架构 — 详见 [ARCHITECTURE.md](ARCHITECTURE.md)
 
+![ODE 项目架构图](docs/assets/ode-architecture.png)
+
 ```
 ┌─────────────────────────────────────────┐
 │  Access Layer                           │
