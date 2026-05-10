@@ -223,7 +223,7 @@ def cmd_status(args):
 
 def cmd_sources(args):
     """List configured opportunity data sources."""
-    result = asyncio.run(service.list_data_sources(status=args.status))
+    result = asyncio.run(service.list_data_sources(status=args.status, region=args.region))
     print(result["data"]["formatted"])
 
 

@@ -36,6 +36,29 @@ def test_service_lists_data_sources():
     assert "Opportunity Data Sources" in result["data"]["formatted"]
 
 
+def test_region_filter_lists_china_sources():
+    from ode.tools.source_registry import list_sources
+
+    sources = list_sources(region="china")
+    source_ids = {source.id for source in sources}
+
+    assert len(sources) >= 20
+    assert "cn_36kr_newsflash" in source_ids
+    assert "cn_v2ex_hot" in source_ids
+    assert "cn_gov_policy" in source_ids
+    assert all(source.region == "china" for source in sources)
+
+
+def test_service_region_filter_lists_china_sources():
+    from ode import service
+
+    result = asyncio.run(service.list_data_sources(region="china"))
+
+    assert result["ok"] is True
+    assert len(result["data"]["sources"]) >= 20
+    assert all(source["region"] == "china" for source in result["data"]["sources"])
+
+
 def test_scanner_signals_include_source_ids(monkeypatch):
     from ode.tools import trend_scanner
 

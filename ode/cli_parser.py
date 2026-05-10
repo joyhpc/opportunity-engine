@@ -62,6 +62,11 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["active", "optional", "utility", "manual", "planned"],
         help="Filter sources by registry status",
     )
+    p.add_argument(
+        "--region",
+        choices=["global", "china"],
+        help="Filter sources by region",
+    )
     sub.add_parser("portfolio", help="Show portfolio view")
 
     p = sub.add_parser("compare", help="Compare opportunities")

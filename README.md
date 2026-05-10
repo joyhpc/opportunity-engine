@@ -66,7 +66,7 @@ python3 -m ode portfolio
 | `report` | 生成 Markdown 报告 | `ode report <id> --print` |
 | `insights` | 矛盾/盲区/转型建议 | `ode insights <id>` |
 | `lens` | Founder Fit Lens 软排序 | `ode lens <id> --profile examples/profiles/open_founder_profile.json` |
-| `sources` | 查看机会发现数据源注册表 | `ode sources --status active` |
+| `sources` | 查看机会发现数据源注册表 | `ode sources --region china` |
 | `portfolio` | 组合对比视图 | `ode portfolio` |
 | `compare` | 并排对比机会 | `ode compare "id1,id2"` |
 | `status` | ODE 系统状态 | `ode status` |
@@ -108,7 +108,7 @@ python3 -m ode portfolio
 | `prototypes/` | 原型实验区，不被运行时代码直接依赖 |
 
 详细层级和整理规则见 [docs/03-project-structure.md](docs/03-project-structure.md)。
-数据源注册表和扫描边界见 [docs/04-data-sources.md](docs/04-data-sources.md)。
+数据源注册表和扫描边界见 [docs/04-data-sources.md](docs/04-data-sources.md)，包括中国国内源。
 
 机会筛选采用 “开放发现 + 延迟判断”：
 
@@ -182,7 +182,7 @@ ODE 的核心差异化：不仅评估，还启发。
 ## Test Suite
 
 ```bash
-python3 -m pytest tests/ -v    # 118 tests
+python3 -m pytest tests/ -v    # 120 tests
 ```
 
 | Test File | Tests | Coverage |
@@ -194,7 +194,7 @@ python3 -m pytest tests/ -v    # 118 tests
 | `tests/test_import_integration.py` | 2 | 外部导入素材到 ODE 七阶段计划的契约 |
 | `tests/test_project_structure.py` | 3 | 仓库层级边界、运行产物追踪检查 |
 | `tests/test_service.py` | 43 | service layer、实验记录、实际财务数据、gate refresh |
-| `tests/test_source_registry.py` | 4 | 数据源注册表、runtime source ids、scanner source_id |
+| `tests/test_source_registry.py` | 6 | 数据源注册表、地区过滤、runtime source ids、scanner source_id |
 
 ---
 

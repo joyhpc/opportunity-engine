@@ -187,3 +187,644 @@ sources:
     limitations:
       - Funding is not product-market fit.
       - News coverage can lag real market changes.
+
+  - id: cn_36kr_newsflash
+    label: 36Kr Newsflash
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: web
+    layer: market_signal
+    adapter: planned
+    endpoint: "https://36kr.com/newsflashes"
+    auth: none
+    default_enabled: false
+    freshness: daily
+    requires:
+      - approved web adapter
+    params:
+      - query
+      - lookback_days
+    strength_method: planned
+    best_for:
+      - China startup launches
+      - financing news
+      - enterprise technology trends
+    limitations:
+      - Web layout can change.
+      - News coverage favors funded and PR-visible companies.
+
+  - id: cn_huxiu_articles
+    label: Huxiu Articles
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: web
+    layer: market_signal
+    adapter: planned
+    endpoint: "https://www.huxiu.com/"
+    auth: none
+    default_enabled: false
+    freshness: daily
+    requires:
+      - approved web adapter
+    params:
+      - channel
+      - lookback_days
+    strength_method: planned
+    best_for:
+      - China tech narratives
+      - consumer internet
+      - AI commercialization discussion
+    limitations:
+      - Editorial framing can amplify narratives before demand is proven.
+
+  - id: cn_tmtpost_news
+    label: TMTPost
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: web
+    layer: market_signal
+    adapter: planned
+    endpoint: "https://www.tmtpost.com/"
+    auth: none
+    default_enabled: false
+    freshness: daily
+    requires:
+      - approved web adapter
+    params:
+      - query
+      - lookback_days
+    strength_method: planned
+    best_for:
+      - China technology news
+      - platform shifts
+      - enterprise tech
+    limitations:
+      - Requires deduplication with other tech media.
+
+  - id: cn_cyzone_news
+    label: Cyzone
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: web
+    layer: funding_signal
+    adapter: planned
+    endpoint: "https://www.cyzone.cn/"
+    auth: none
+    default_enabled: false
+    freshness: daily
+    requires:
+      - approved web adapter
+    params:
+      - query
+      - lookback_days
+    strength_method: planned
+    best_for:
+      - China startup financing
+      - new-company emergence
+      - investor category interest
+    limitations:
+      - Funding activity is not product-market fit.
+
+  - id: cn_iyiou_industry
+    label: iYiou
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: web
+    layer: industry_signal
+    adapter: planned
+    endpoint: "https://www.iyiou.com/"
+    auth: none
+    default_enabled: false
+    freshness: daily to weekly
+    requires:
+      - approved web adapter
+    params:
+      - industry
+      - lookback_days
+    strength_method: planned
+    best_for:
+      - China industry digitization
+      - healthcare
+      - retail
+      - enterprise services
+    limitations:
+      - Industry reports may lag grassroots pain.
+
+  - id: cn_itjuzi_funding
+    label: IT Juzi Funding Database
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: paid_or_manual
+    layer: funding_signal
+    adapter: planned
+    endpoint: "https://www.itjuzi.com/"
+    auth: likely_required
+    default_enabled: false
+    freshness: daily to weekly
+    requires:
+      - subscription or manual export
+    params:
+      - industry
+      - stage
+      - lookback_days
+    strength_method: planned
+    best_for:
+      - China startup funding patterns
+      - competitor emergence
+      - category heat
+    limitations:
+      - May require paid access.
+      - Funding does not equal customer demand.
+
+  - id: cn_qimingpian_funding
+    label: Qimingpian Funding Database
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: paid_or_manual
+    layer: funding_signal
+    adapter: planned
+    endpoint: "https://www.qimingpian.com/"
+    auth: likely_required
+    default_enabled: false
+    freshness: daily to weekly
+    requires:
+      - subscription or manual export
+    params:
+      - industry
+      - stage
+      - lookback_days
+    strength_method: planned
+    best_for:
+      - financing trend cross-check
+      - private-company monitoring
+    limitations:
+      - Paid data source; terms must be respected.
+
+  - id: cn_qichacha_company
+    label: Qichacha Company Data
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: paid_api_or_manual
+    layer: company_signal
+    adapter: planned
+    endpoint: "https://www.qichacha.com/"
+    auth: likely_required
+    default_enabled: false
+    freshness: query dependent
+    requires:
+      - API access or manual export
+    params:
+      - company_name
+      - industry
+    strength_method: planned
+    best_for:
+      - company validation
+      - competitor verification
+      - legal entity checks
+    limitations:
+      - Paid or restricted access likely required.
+      - Not a broad discovery feed by itself.
+
+  - id: cn_tianyancha_company
+    label: Tianyancha Company Data
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: paid_api_or_manual
+    layer: company_signal
+    adapter: planned
+    endpoint: "https://www.tianyancha.com/"
+    auth: likely_required
+    default_enabled: false
+    freshness: query dependent
+    requires:
+      - API access or manual export
+    params:
+      - company_name
+      - industry
+    strength_method: planned
+    best_for:
+      - competitor verification
+      - company registration signals
+    limitations:
+      - Paid or restricted access likely required.
+
+  - id: cn_juejin_hot
+    label: Juejin Hot Articles
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: web
+    layer: builder_signal
+    adapter: planned
+    endpoint: "https://juejin.cn/hot/articles"
+    auth: none
+    default_enabled: false
+    freshness: daily
+    requires:
+      - approved web adapter
+    params:
+      - tag
+      - lookback_days
+    strength_method: planned
+    best_for:
+      - China developer pain
+      - frontend/backend/AI engineering adoption
+      - toolchain interest
+    limitations:
+      - Developer-community bias.
+      - Popular tutorials are not always purchase intent.
+
+  - id: cn_oschina_news
+    label: OSChina News
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: web
+    layer: builder_signal
+    adapter: planned
+    endpoint: "https://www.oschina.net/news"
+    auth: none
+    default_enabled: false
+    freshness: daily
+    requires:
+      - approved web adapter
+    params:
+      - query
+      - lookback_days
+    strength_method: planned
+    best_for:
+      - China open-source ecosystem
+      - developer infrastructure
+      - enterprise software adoption
+    limitations:
+      - Open-source interest may not convert to revenue.
+
+  - id: cn_v2ex_hot
+    label: V2EX Hot Topics
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: public_api
+    layer: community_signal
+    adapter: planned
+    endpoint: "https://www.v2ex.com/api/topics/hot.json"
+    auth: none
+    default_enabled: false
+    freshness: near-real-time hot topics
+    requires:
+      - approved API adapter
+    params:
+      - limit
+    strength_method: planned
+    best_for:
+      - China indie hackers
+      - developer sentiment
+      - workplace pain
+    limitations:
+      - Small and technical community.
+      - Needs topic filtering to reduce chatter.
+
+  - id: cn_zhihu_hot
+    label: Zhihu Hot List
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: web
+    layer: public_attention_signal
+    adapter: planned
+    endpoint: "https://www.zhihu.com/hot"
+    auth: none
+    default_enabled: false
+    freshness: daily
+    requires:
+      - approved web adapter
+    params:
+      - lookback_days
+    strength_method: planned
+    best_for:
+      - public debate
+      - consumer pain
+      - education and career topics
+    limitations:
+      - Attention does not equal willingness to pay.
+      - Platform access may change.
+
+  - id: cn_weibo_hot_search
+    label: Weibo Hot Search
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: web
+    layer: public_attention_signal
+    adapter: planned
+    endpoint: "https://s.weibo.com/top/summary"
+    auth: none
+    default_enabled: false
+    freshness: near-real-time
+    requires:
+      - approved web adapter
+    params:
+      - lookback_hours
+    strength_method: planned
+    best_for:
+      - consumer attention
+      - cultural timing
+      - public sentiment spikes
+    limitations:
+      - High noise.
+      - Easily dominated by entertainment and news cycles.
+
+  - id: cn_xiaohongshu_manual
+    label: Xiaohongshu Manual Signals
+    status: manual
+    region: china
+    language:
+      - zh-CN
+    access_method: manual
+    layer: consumer_signal
+    adapter: ode.core.models.Signal
+    endpoint: local manual notes
+    auth: user_account
+    default_enabled: false
+    freshness: user supplied
+    requires:
+      - manual note
+      - source URL or screenshot reference
+    params:
+      - query
+      - note_url
+      - keyword
+    strength_method: user supplied
+    best_for:
+      - consumer desire
+      - lifestyle pain
+      - purchase language
+    limitations:
+      - No stable public scan adapter in this project.
+      - Manual capture must respect platform terms.
+
+  - id: cn_wechat_public_manual
+    label: WeChat Public Account Manual Signals
+    status: manual
+    region: china
+    language:
+      - zh-CN
+    access_method: manual
+    layer: expert_signal
+    adapter: ode.core.models.Signal
+    endpoint: local manual notes
+    auth: user_account
+    default_enabled: false
+    freshness: user supplied
+    requires:
+      - article URL or saved note
+    params:
+      - account
+      - article_url
+      - keyword
+    strength_method: user supplied
+    best_for:
+      - expert commentary
+      - vertical industry narratives
+      - B2B buyer language
+    limitations:
+      - No stable public scan adapter in this project.
+      - Manual curation bias.
+
+  - id: cn_baidu_index
+    label: Baidu Index
+    status: manual
+    region: china
+    language:
+      - zh-CN
+    access_method: manual_or_paid
+    layer: search_interest
+    adapter: ode.core.models.Signal
+    endpoint: "https://index.baidu.com/"
+    auth: user_account
+    default_enabled: false
+    freshness: query dependent
+    requires:
+      - keyword
+      - manual export or screenshot notes
+    params:
+      - keyword
+      - timeframe
+    strength_method: user supplied
+    best_for:
+      - China search demand
+      - consumer and SME keyword timing
+    limitations:
+      - Manual or restricted access.
+      - Needs keyword seeds.
+
+  - id: cn_wechat_index
+    label: WeChat Index
+    status: manual
+    region: china
+    language:
+      - zh-CN
+    access_method: manual
+    layer: social_search_interest
+    adapter: ode.core.models.Signal
+    endpoint: WeChat app
+    auth: user_account
+    default_enabled: false
+    freshness: query dependent
+    requires:
+      - keyword
+      - manual export or notes
+    params:
+      - keyword
+      - timeframe
+    strength_method: user supplied
+    best_for:
+      - China social interest
+      - consumer and content trend timing
+    limitations:
+      - Manual-only in this project.
+      - Needs keyword seeds.
+
+  - id: cn_bilibili_ranking
+    label: Bilibili Ranking
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: public_web_api
+    layer: content_signal
+    adapter: planned
+    endpoint: "https://api.bilibili.com/x/web-interface/ranking/v2"
+    auth: none
+    default_enabled: false
+    freshness: daily
+    requires:
+      - approved API adapter
+    params:
+      - category
+      - lookback_days
+    strength_method: planned
+    best_for:
+      - youth consumer interest
+      - creator economy
+      - education and AI tool content
+    limitations:
+      - Content popularity is not direct willingness to pay.
+
+  - id: cn_douban_group_manual
+    label: Douban Group Manual Signals
+    status: manual
+    region: china
+    language:
+      - zh-CN
+    access_method: manual
+    layer: community_signal
+    adapter: ode.core.models.Signal
+    endpoint: local manual notes
+    auth: user_account
+    default_enabled: false
+    freshness: user supplied
+    requires:
+      - group URL or note
+    params:
+      - group
+      - topic_url
+      - keyword
+    strength_method: user supplied
+    best_for:
+      - niche consumer communities
+      - lifestyle and education pain
+    limitations:
+      - Manual-only.
+      - Community norms and access must be respected.
+
+  - id: cn_gov_policy
+    label: China Government Policy Signals
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: official_web
+    layer: policy_signal
+    adapter: planned
+    endpoint: "https://www.gov.cn/zhengce/"
+    auth: none
+    default_enabled: false
+    freshness: daily to weekly
+    requires:
+      - approved web adapter
+    params:
+      - query
+      - ministry
+      - lookback_days
+    strength_method: planned
+    best_for:
+      - regulatory tailwinds
+      - subsidies and policy direction
+      - compliance risk
+    limitations:
+      - Policy signals need business interpretation.
+
+  - id: cn_miit_policy
+    label: MIIT Policy and Notices
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: official_web
+    layer: policy_signal
+    adapter: planned
+    endpoint: "https://www.miit.gov.cn/"
+    auth: none
+    default_enabled: false
+    freshness: daily to weekly
+    requires:
+      - approved web adapter
+    params:
+      - query
+      - lookback_days
+    strength_method: planned
+    best_for:
+      - manufacturing digitization
+      - industrial internet
+      - AI and software policy
+    limitations:
+      - Policy language can be broad and slow-moving.
+
+  - id: cn_stats_data
+    label: National Bureau of Statistics China
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: official_web
+    layer: macro_signal
+    adapter: planned
+    endpoint: "https://data.stats.gov.cn/"
+    auth: none
+    default_enabled: false
+    freshness: monthly to yearly
+    requires:
+      - approved data adapter
+    params:
+      - indicator
+      - region
+      - period
+    strength_method: planned
+    best_for:
+      - TAM sanity checks
+      - demographic shifts
+      - macro demand context
+    limitations:
+      - Slow-moving macro data.
+      - Not useful for early pain discovery alone.
+
+  - id: cn_government_procurement
+    label: China Government Procurement
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: official_web
+    layer: procurement_signal
+    adapter: planned
+    endpoint: "http://www.ccgp.gov.cn/"
+    auth: none
+    default_enabled: false
+    freshness: daily
+    requires:
+      - approved web adapter
+    params:
+      - query
+      - region
+      - lookback_days
+    strength_method: planned
+    best_for:
+      - B2G demand
+      - budget-backed needs
+      - procurement language
+    limitations:
+      - Procurement demand can be slow and relationship-heavy.

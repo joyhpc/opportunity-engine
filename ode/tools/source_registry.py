@@ -45,6 +45,9 @@ class DataSource:
     strength_method: str
     best_for: list[str]
     limitations: list[str]
+    region: str = "global"
+    language: list[str] = None
+    access_method: str = "unknown"
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -73,17 +76,27 @@ def load_source_catalog(path: str | Path | None = None) -> list[DataSource]:
         if raw["id"] in seen:
             raise ValueError(f"Duplicate source id: {raw['id']}")
         seen.add(raw["id"])
-        loaded.append(DataSource(**{key: raw[key] for key in REQUIRED_FIELDS}))
+        optional = {
+            "region": raw.get("region", "global"),
+            "language": raw.get("language", []),
+            "access_method": raw.get("access_method", "unknown"),
+        }
+        loaded.append(DataSource(
+            **{key: raw[key] for key in REQUIRED_FIELDS},
+            **optional,
+        ))
 
-    return sorted(loaded, key=lambda source: (source.status, source.id))
+    return sorted(loaded, key=lambda source: (source.status, source.region, source.id))
 
 
-def list_sources(status: str | None = None) -> list[DataSource]:
+def list_sources(status: str | None = None, region: str | None = None) -> list[DataSource]:
     """List sources, optionally filtering by status."""
 
     sources = load_source_catalog()
     if status:
-        return [source for source in sources if source.status == status]
+        sources = [source for source in sources if source.status == status]
+    if region:
+        sources = [source for source in sources if source.region == region]
     return sources
 
 
@@ -112,13 +125,13 @@ def format_source_catalog(sources: list[DataSource]) -> str:
     lines = [
         "# Opportunity Data Sources",
         "",
-        "| Status | ID | Layer | Default | Adapter |",
-        "|--------|----|-------|---------|---------|",
+        "| Status | Region | ID | Layer | Default | Adapter |",
+        "|--------|--------|----|-------|---------|---------|",
     ]
     for source in sources:
         default = "yes" if source.default_enabled else "no"
         lines.append(
-            f"| {source.status} | {source.id} | {source.layer} | {default} | {source.adapter} |"
+            f"| {source.status} | {source.region} | {source.id} | {source.layer} | {default} | {source.adapter} |"
         )
     lines.extend([
         "",

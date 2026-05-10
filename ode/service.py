@@ -289,10 +289,10 @@ async def get_portfolio() -> dict:
 # Data Sources
 # ---------------------------------------------------------------------------
 
-async def list_data_sources(status: str | None = None) -> dict:
+async def list_data_sources(status: str | None = None, region: str | None = None) -> dict:
     from ode.tools.source_registry import format_source_catalog, list_sources, runtime_source_ids
 
-    sources = list_sources(status=status)
+    sources = list_sources(status=status, region=region)
     runtime_ids = runtime_source_ids()
     return _ok({
         "sources": [

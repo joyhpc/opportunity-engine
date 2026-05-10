@@ -33,7 +33,7 @@ python3 -m ode portfolio
 | 01 | [Heuristic Design](01-heuristic-design.md) | 启发模块设计思路与应用笔记 | explore/bridge/reframe/synthesize |
 | 02 | [AI Storybook Product Plan](02-ai-storybook-product-plan.md) | 原型产品计划 | storybook prototype |
 | 03 | [Project Structure](03-project-structure.md) | 仓库层级、边界规则、清理路线 | ode/imports/prototypes/tests/tools |
-| 04 | [Data Sources](04-data-sources.md) | 机会发现数据源注册表和扫描边界 | HN、Reddit、Google Trends、planned sources |
+| 04 | [Data Sources](04-data-sources.md) | 机会发现数据源注册表和扫描边界 | HN、Reddit、Google Trends、中国国内源 |
 | — | [Import Integration](import-integration.md) | opportunity-detector 导入契约 | schema、golden example、validator |
 
 ---
@@ -107,7 +107,7 @@ python3 -m ode portfolio
 ## Test Suite
 
 ```bash
-python3 -m pytest tests/ -v    # 118 tests, < 1s
+python3 -m pytest tests/ -v    # 120 tests, < 1s
 ```
 
 | Test File | Tests | Coverage |
@@ -119,7 +119,7 @@ python3 -m pytest tests/ -v    # 118 tests, < 1s
 | [`tests/test_import_integration.py`](../tests/test_import_integration.py) | 2 | imported detector assets and closed-loop plan contract |
 | [`tests/test_project_structure.py`](../tests/test_project_structure.py) | 3 | repository hierarchy boundaries and artifact tracking |
 | [`tests/test_service.py`](../tests/test_service.py) | 43 | service API, experiments, actuals, gate refresh |
-| [`tests/test_source_registry.py`](../tests/test_source_registry.py) | 4 | source registry, runtime source ids, scanner source_id |
+| [`tests/test_source_registry.py`](../tests/test_source_registry.py) | 6 | source registry, region filter, runtime source ids, scanner source_id |
 
 ---
 

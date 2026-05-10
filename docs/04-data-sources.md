@@ -34,6 +34,39 @@ ODE 的机会发现分两层：
 
 Planned sources are intentionally visible but not counted as scanned until an adapter exists and tests pass.
 
+## China-Focused Sources
+
+这些源先进入注册表，不代表都已经自动扫描。国内平台公开 API 不稳定、登录限制多、平台条款差异大，所以先按可审计目录管理，后续逐个挑选成 adapter。
+
+| Source ID | Status | Signal Type |
+|-----------|--------|-------------|
+| `cn_36kr_newsflash` | planned | startup launches, funding, tech news |
+| `cn_huxiu_articles` | planned | China tech narratives |
+| `cn_tmtpost_news` | planned | platform and enterprise tech news |
+| `cn_cyzone_news` | planned | startup and financing news |
+| `cn_iyiou_industry` | planned | industry digitization |
+| `cn_itjuzi_funding` | planned | funding database, likely paid/manual |
+| `cn_qimingpian_funding` | planned | funding database, likely paid/manual |
+| `cn_qichacha_company` | planned | company and competitor verification |
+| `cn_tianyancha_company` | planned | company and competitor verification |
+| `cn_juejin_hot` | planned | developer/building signals |
+| `cn_oschina_news` | planned | open-source and enterprise software |
+| `cn_v2ex_hot` | planned | indie/developer community pain |
+| `cn_zhihu_hot` | planned | public attention and consumer questions |
+| `cn_weibo_hot_search` | planned | public attention spikes |
+| `cn_bilibili_ranking` | planned | content and youth consumer interest |
+| `cn_gov_policy` | planned | policy tailwinds and regulation |
+| `cn_miit_policy` | planned | industrial internet, AI, software policy |
+| `cn_stats_data` | planned | macro/TAM sanity checks |
+| `cn_government_procurement` | planned | B2G budget-backed demand |
+| `cn_xiaohongshu_manual` | manual | consumer desire and purchase language |
+| `cn_wechat_public_manual` | manual | expert and B2B vertical narratives |
+| `cn_baidu_index` | manual | China search interest |
+| `cn_wechat_index` | manual | WeChat ecosystem interest |
+| `cn_douban_group_manual` | manual | niche lifestyle/community pain |
+
+Selection rule: promote sources to `active` only after adapter behavior, access stability, and tests are clear.
+
 ## Commands
 
 List all configured sources:
@@ -46,6 +79,12 @@ List only active runtime sources:
 
 ```bash
 python -m ode sources --status active
+```
+
+List China-focused sources:
+
+```bash
+python -m ode sources --region china
 ```
 
 Get JSON:
