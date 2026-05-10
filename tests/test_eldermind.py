@@ -4,6 +4,7 @@ import asyncio
 import os
 import pytest
 import shutil
+import sys
 from pathlib import Path
 
 
@@ -271,7 +272,7 @@ class TestCLI:
         """FIX: argparse help strings with %% should not crash."""
         import subprocess
         r = subprocess.run(
-            ["python3", "-m", "ode", "eval", "--help"],
+            [sys.executable, "-m", "ode", "eval", "--help"],
             capture_output=True, text=True, timeout=10,
             cwd=str(Path(__file__).parent.parent),
         )
@@ -288,7 +289,7 @@ class TestCLI:
 
         import subprocess
         r = subprocess.run(
-            ["python3", "-m", "ode", "eval", opp.id, "--scores", "not json"],
+            [sys.executable, "-m", "ode", "eval", opp.id, "--scores", "not json"],
             capture_output=True, text=True, timeout=10,
             cwd=str(Path(__file__).parent.parent),
             env={**os.environ, "ODE_ROOT": os.environ.get("ODE_ROOT", "")},

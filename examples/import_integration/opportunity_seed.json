@@ -1,0 +1,22 @@
+{
+  "id": "eldermind-cognitive-resilience",
+  "title": "ElderMind cognitive resilience companion",
+  "domain": "elder care",
+  "signals": [
+    {
+      "source": "caregiver interviews",
+      "claim": "Families want lightweight daily cognitive exercises and decline signals, but do not want a medical device workflow.",
+      "confidence": "medium"
+    },
+    {
+      "source": "prototype backlog",
+      "claim": "Voice-first interaction can reduce setup friction for older adults if privacy and escalation are explicit.",
+      "confidence": "medium"
+    }
+  ],
+  "constraints": [
+    "No diagnosis or medical claims.",
+    "Human confirmation is required before caregiver escalation.",
+    "Unit economics must include support and privacy review cost."
+  ]
+}

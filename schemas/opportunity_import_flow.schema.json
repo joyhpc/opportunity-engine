@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/joyhpc/opportunity-engine/schemas/opportunity_import_flow.schema.json",
+  "title": "Opportunity Import Flow",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "source",
+    "seed",
+    "stages",
+    "gates",
+    "acceptance",
+    "verification",
+    "artifacts"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "source": {
+      "type": "object",
+      "required": ["repository", "import_path", "template_files", "subtask_files", "tool_files"],
+      "properties": {
+        "repository": { "type": "string" },
+        "import_path": { "type": "string" },
+        "template_files": { "type": "array", "items": { "type": "string" } },
+        "subtask_files": { "type": "array", "items": { "type": "string" } },
+        "tool_files": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "seed": {
+      "type": "object",
+      "required": ["id", "title", "domain", "signals", "constraints"],
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "domain": { "type": "string" },
+        "signals": { "type": "array", "items": { "type": "object" } },
+        "constraints": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "stages": {
+      "type": "array",
+      "minItems": 7,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "imported_subtasks", "deliverables", "done_when"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "imported_subtasks": { "type": "array", "items": { "type": "string" } },
+          "deliverables": { "type": "array", "items": { "type": "string" } },
+          "done_when": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "gates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["stage", "decision", "minimum_evidence"],
+        "properties": {
+          "stage": { "type": "string" },
+          "decision": { "type": "string" },
+          "minimum_evidence": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "acceptance": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "verification": {
+      "type": "object",
+      "required": ["commands", "mainstream_environments"],
+      "properties": {
+        "commands": { "type": "array", "items": { "type": "string" } },
+        "mainstream_environments": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "purpose"],
+        "properties": {
+          "path": { "type": "string" },
+          "purpose": { "type": "string" }
+        }
+      }
+    }
+  }
+}

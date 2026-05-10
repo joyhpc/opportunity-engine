@@ -1,0 +1,215 @@
+{
+  "schema_version": "1.0.0",
+  "source": {
+    "repository": "joyhpc/opportunity-detector",
+    "import_path": "imports/opportunity-detector",
+    "template_files": [
+      "imports/opportunity-detector/templates/opportunity_detector.yaml",
+      "imports/opportunity-detector/templates/opportunity_detector_fast.yaml"
+    ],
+    "subtask_files": [
+      "imports/opportunity-detector/subtasks/business_planning.yaml",
+      "imports/opportunity-detector/subtasks/deep_analysis.yaml",
+      "imports/opportunity-detector/subtasks/market_screening.yaml",
+      "imports/opportunity-detector/subtasks/signal_capture.yaml",
+      "imports/opportunity-detector/subtasks/validation.yaml"
+    ],
+    "tool_files": [
+      "imports/opportunity-detector/tools/competitor_matrix.py",
+      "imports/opportunity-detector/tools/financial_model.py",
+      "imports/opportunity-detector/tools/idea_validator.py",
+      "imports/opportunity-detector/tools/market_sizer.py",
+      "imports/opportunity-detector/tools/opportunity_scorer.py",
+      "imports/opportunity-detector/tools/pain_miner.py",
+      "imports/opportunity-detector/tools/report_generator.py",
+      "imports/opportunity-detector/tools/trend_scanner.py"
+    ]
+  },
+  "seed": {
+    "id": "eldermind-cognitive-resilience",
+    "title": "ElderMind cognitive resilience companion",
+    "domain": "elder care",
+    "signals": [
+      {
+        "source": "caregiver interviews",
+        "claim": "Families want lightweight daily cognitive exercises and decline signals, but do not want a medical device workflow.",
+        "confidence": "medium"
+      },
+      {
+        "source": "prototype backlog",
+        "claim": "Voice-first interaction can reduce setup friction for older adults if privacy and escalation are explicit.",
+        "confidence": "medium"
+      }
+    ],
+    "constraints": [
+      "No diagnosis or medical claims.",
+      "Human confirmation is required before caregiver escalation.",
+      "Unit economics must include support and privacy review cost."
+    ]
+  },
+  "stages": [
+    {
+      "id": "SENSE",
+      "name": "Opportunity sensing",
+      "imported_subtasks": [
+        "signal_capture"
+      ],
+      "deliverables": [
+        "Signal list",
+        "Desk research memo",
+        "One-page opportunity brief"
+      ],
+      "done_when": [
+        "At least two independent signals are recorded",
+        "Brief states confidence and unknowns"
+      ]
+    },
+    {
+      "id": "SCREEN",
+      "name": "Initial screening",
+      "imported_subtasks": [
+        "business_planning",
+        "deep_analysis",
+        "market_screening"
+      ],
+      "deliverables": [
+        "TAM/SAM/SOM estimate",
+        "Competitor map",
+        "Capability gap",
+        "Rough unit economics"
+      ],
+      "done_when": [
+        "Scorecard produces Go/Maybe/Kill",
+        "Economics assumptions are explicit"
+      ]
+    },
+    {
+      "id": "ANALYZE",
+      "name": "Deep analysis",
+      "imported_subtasks": [
+        "deep_analysis"
+      ],
+      "deliverables": [
+        "Market deep dive",
+        "Risk register",
+        "Financial model"
+      ],
+      "done_when": [
+        "NPV and sensitivity assumptions are inspectable",
+        "P0 regulatory risks are called out"
+      ]
+    },
+    {
+      "id": "VALIDATE",
+      "name": "Validation",
+      "imported_subtasks": [
+        "validation"
+      ],
+      "deliverables": [
+        "Hypothesis list",
+        "MVP design",
+        "Validation report"
+      ],
+      "done_when": [
+        "Paid or return-user evidence is linked",
+        "Privacy and safety checks are complete"
+      ]
+    },
+    {
+      "id": "PLAN",
+      "name": "Business planning",
+      "imported_subtasks": [
+        "business_planning"
+      ],
+      "deliverables": [
+        "Business model",
+        "Resource plan",
+        "GTM plan",
+        "Risk mitigation plan"
+      ],
+      "done_when": [
+        "Launch decision has owner, budget, and rollback condition"
+      ]
+    },
+    {
+      "id": "LAUNCH",
+      "name": "Execution",
+      "imported_subtasks": [],
+      "deliverables": [
+        "Phase-1 execution checklist",
+        "First revenue record"
+      ],
+      "done_when": [
+        "First measurable revenue or qualified customer commitment is recorded"
+      ]
+    },
+    {
+      "id": "MONITOR",
+      "name": "Monitoring",
+      "imported_subtasks": [],
+      "deliverables": [
+        "Metrics dashboard",
+        "Iteration review"
+      ],
+      "done_when": [
+        "Metrics are reviewed and next action is decided"
+      ]
+    }
+  ],
+  "gates": [
+    {
+      "stage": "SCREEN",
+      "decision": "Go/Maybe/Kill",
+      "minimum_evidence": [
+        "scorecard >= 60 for Go/Maybe",
+        "kill reason is recorded when below threshold"
+      ]
+    },
+    {
+      "stage": "VALIDATE",
+      "decision": "Go/Pivot/Kill",
+      "minimum_evidence": [
+        "at least one direct user signal",
+        "MVP result recorded",
+        "risk owner assigned"
+      ]
+    },
+    {
+      "stage": "PLAN",
+      "decision": "Launch approval",
+      "minimum_evidence": [
+        "budget",
+        "owner",
+        "first revenue path",
+        "rollback condition"
+      ]
+    }
+  ],
+  "acceptance": [
+    "The imported detector assets are discoverable without depending on the deleted source repository.",
+    "A seed opportunity can be converted into a seven-stage ODE plan deterministically.",
+    "The plan states deliverables, gate decisions, verification commands, and generated artifacts."
+  ],
+  "verification": {
+    "commands": [
+      "python tools/check_environment.py",
+      "python tools/validate_import_integration.py",
+      "python -m pytest"
+    ],
+    "mainstream_environments": [
+      "windows-latest",
+      "ubuntu-latest",
+      "macos-latest"
+    ]
+  },
+  "artifacts": [
+    {
+      "path": "examples/import_integration/opportunity_seed.json",
+      "purpose": "Golden input for the minimal opportunity task executor."
+    },
+    {
+      "path": "examples/import_integration/closed_loop_plan.golden.json",
+      "purpose": "Deterministic closed-loop plan generated from the imported detector assets."
+    }
+  ]
+}
