@@ -21,6 +21,44 @@ ODE 是一个命令行工具，帮助独立开发者和小团队系统化地发�
 
 ---
 
+## How To Use
+
+第一次使用先完成环境检查：
+
+```bash
+cd ~/opportunity-engine
+python -m pip install -r requirements.txt
+python tools/check_environment.py
+python -m ode status
+```
+
+常用有两条主线：
+
+```bash
+# A. 我还不知道做什么：先开放发现，再看赚钱案例
+python -m ode sources --region china
+python -m ode sources --region global
+python -m ode cases --region china --min-grade B
+python -m ode explore
+
+# B. 我已经有一个方向：创建机会，扫描，评估，生成报告
+python -m ode create --name "AI Tutor" --domain education --keywords "AI,tutoring,personalized"
+python -m ode scan --keywords "AI tutoring,personalized learning" --hn-top 30 --reddit "edtech,learnprogramming"
+python -m ode eval <opp_id> --tam 5e9 --arpu 29.99
+python -m ode insights <opp_id>
+python -m ode lens <opp_id> --profile examples/profiles/open_founder_profile.json
+python -m ode report <opp_id> --stage screen --print
+```
+
+如果要每天或每周跑，当前 repo 的定位是命令行引擎，不内置后台 daemon。推荐把下面这类命令交给系统计划任务、CI、或 Codex automation：
+
+```bash
+python -m ode cases --region china --min-grade B --top 10
+python -m ode explore --hn-top 50 --reddit "startup,SaaS,Entrepreneur,sideproject"
+```
+
+---
+
 ## Quick Start
 
 ```bash
