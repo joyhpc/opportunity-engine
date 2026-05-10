@@ -586,6 +586,223 @@ sources:
       - No stable public scan adapter in this project.
       - Manual capture must respect platform terms.
 
+  - id: cn_xiaohongshu_ark_order_api
+    label: Xiaohongshu Ark Order API
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: official_api_merchant_auth
+    layer: revenue_signal
+    adapter: planned
+    endpoint: "https://school.xiaohongshu.com/en/open/package/package-detail.html"
+    auth: app_key_secret_and_merchant_authorization
+    default_enabled: false
+    freshness: account dependent
+    requires:
+      - approved Xiaohongshu merchant or service-provider access
+      - app key and app secret
+      - merchant authorization
+    params:
+      - package_id
+      - order_time_range
+      - status
+    strength_method: "authorized paid-order and package fields; stronger than public engagement when access is valid"
+    best_for:
+      - revenue verification
+      - ecommerce opportunity proof
+      - category purchase demand
+    limitations:
+      - This is merchant/order data, not a public note search API.
+      - Only covers owned or authorized shops.
+      - Includes sensitive commerce and buyer data; adapter must minimize and redact fields.
+
+  - id: cn_xiaohongshu_miniapp_platform
+    label: Xiaohongshu Mini App Platform
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: official_platform_review
+    layer: owned_channel_signal
+    adapter: planned
+    endpoint: "https://miniapp.xiaohongshu.com/"
+    auth: developer_account_and_platform_review
+    default_enabled: false
+    freshness: account dependent
+    requires:
+      - Xiaohongshu mini app developer access
+      - approved app category
+    params:
+      - app_id
+      - event_type
+      - time_range
+    strength_method: "owned mini-app funnel metrics when available"
+    best_for:
+      - owned funnel experiments
+      - transaction or lead conversion checks
+      - Xiaohongshu-native product tests
+    limitations:
+      - Not a broad discovery feed.
+      - Access depends on platform review and app category.
+      - Useful for validation after a hypothesis exists, not for open-ended scanning.
+
+  - id: cn_douyin_video_search_api
+    label: Douyin Video Search API
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: official_api_approved_scope
+    layer: content_search_signal
+    adapter: planned
+    endpoint: "https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/openapi/douyin-search-capability/aweme-dy-video-search"
+    auth: client_token_and_approved_scope
+    default_enabled: false
+    freshness: near-real-time subject to quota
+    requires:
+      - Douyin open platform app
+      - approved aweme.dy.video_search_v2 scope
+      - quota monitoring
+    params:
+      - keyword
+      - count
+      - cursor
+      - publish_time
+      - sort_type
+    strength_method: "search result presence plus engagement fields such as digg_count; does not prove revenue"
+    best_for:
+      - China short-video trend discovery
+      - consumer language
+      - content-market timing
+    limitations:
+      - Ability requires platform approval and may be quota-limited.
+      - Public engagement is attention, not willingness to pay.
+      - Adapter should store only source URL, title, creator handle, and aggregate metrics.
+
+  - id: cn_douyin_open_video_data
+    label: Douyin Open Video Data
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: official_api_user_auth
+    layer: owned_account_signal
+    adapter: planned
+    endpoint: "https://open.douyin.com/platform/resource/docs/ability/open-data/video-data-solution"
+    auth: user_authorization_and_approved_permission
+    default_enabled: false
+    freshness: account dependent
+    requires:
+      - authorized Douyin account
+      - approved video data permission
+    params:
+      - open_id
+      - item_id
+      - time_range
+    strength_method: "authorized account video metrics over time; useful for validation, not broad discovery"
+    best_for:
+      - owned creator/product traction
+      - campaign validation
+      - content-to-demand learning loops
+    limitations:
+      - Requires user authorization.
+      - Covers authorized accounts or videos, not platform-wide scanning.
+      - Still needs revenue evidence before ranking as a business case.
+
+  - id: cn_wechat_channels_assistant_manual
+    label: WeChat Channels Assistant Manual Signals
+    status: manual
+    region: china
+    language:
+      - zh-CN
+    access_method: manual_account_backend
+    layer: owned_account_signal
+    adapter: ode.core.models.Signal
+    endpoint: "https://channels.weixin.qq.com/login.html"
+    auth: user_account
+    default_enabled: false
+    freshness: user supplied
+    requires:
+      - account owner access
+      - manual export or notes
+    params:
+      - video_url
+      - account
+      - metric_snapshot
+      - time_range
+    strength_method: user supplied account metrics
+    best_for:
+      - WeChat Channels owned-account review
+      - livestream or content validation
+      - private-domain funnel analysis
+    limitations:
+      - No stable public feed scanner is registered.
+      - Use only account-owned or authorized data.
+      - Manual snapshots should be linked to source notes for auditability.
+
+  - id: cn_wechat_channels_miniapp_api
+    label: WeChat Channels Mini Program APIs
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: official_api_same_subject
+    layer: owned_channel_signal
+    adapter: planned
+    endpoint: "https://developers.weixin.qq.com/miniprogram/dev/framework/open-ability/channels-live.html"
+    auth: mini_program_and_open_platform_subject_binding
+    default_enabled: false
+    freshness: account dependent
+    requires:
+      - WeChat Mini Program
+      - same-subject or associated Channels account
+      - approved open capability
+    params:
+      - finder_user_name
+      - feed_id
+      - nonce_id
+    strength_method: "owned channel/live connection signals; not a public market feed"
+    best_for:
+      - WeChat ecosystem funnel tests
+      - video/live entry-point validation
+      - owned-channel conversion loops
+    limitations:
+      - Mainly connects mini programs with owned Channels content.
+      - Not suitable for broad public trend discovery.
+      - Access depends on account relationship and platform capability rules.
+
+  - id: cn_wechat_store_api
+    label: WeChat Store API
+    status: planned
+    region: china
+    language:
+      - zh-CN
+    access_method: official_api_merchant_auth
+    layer: revenue_signal
+    adapter: planned
+    endpoint: "https://developers.weixin.qq.com/doc/store/shop"
+    auth: app_credentials_and_merchant_authorization
+    default_enabled: false
+    freshness: account dependent
+    requires:
+      - WeChat Store merchant access
+      - app credentials
+      - authorized shop
+    params:
+      - order_id
+      - product_id
+      - time_range
+    strength_method: "authorized store orders and product data; stronger proof than social engagement"
+    best_for:
+      - revenue validation
+      - product-market evidence in WeChat ecosystem
+      - ecommerce competitor verification
+    limitations:
+      - Store data is not public discovery data.
+      - Access is merchant/authorization scoped.
+      - Adapter must redact customer and payment-sensitive fields.
+
   - id: cn_wechat_public_manual
     label: WeChat Public Account Manual Signals
     status: manual

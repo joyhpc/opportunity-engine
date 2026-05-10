@@ -60,10 +60,29 @@ Planned sources are intentionally visible but not counted as scanned until an ad
 | `cn_stats_data` | planned | macro/TAM sanity checks |
 | `cn_government_procurement` | planned | B2G budget-backed demand |
 | `cn_xiaohongshu_manual` | manual | consumer desire and purchase language |
+| `cn_xiaohongshu_ark_order_api` | planned | authorized merchant order/revenue proof |
+| `cn_xiaohongshu_miniapp_platform` | planned | owned Xiaohongshu mini-app funnel signals |
+| `cn_douyin_video_search_api` | planned | approved official Douyin video search signal |
+| `cn_douyin_open_video_data` | planned | authorized owned-account Douyin video metrics |
+| `cn_wechat_channels_assistant_manual` | manual | owned WeChat Channels backend snapshots |
+| `cn_wechat_channels_miniapp_api` | planned | owned WeChat Channels / mini-program connection signals |
+| `cn_wechat_store_api` | planned | authorized WeChat Store order/revenue proof |
 | `cn_wechat_public_manual` | manual | expert and B2B vertical narratives |
 | `cn_baidu_index` | manual | China search interest |
 | `cn_wechat_index` | manual | WeChat ecosystem interest |
 | `cn_douban_group_manual` | manual | niche lifestyle/community pain |
+
+## Restricted Social Commerce Platforms
+
+Xiaohongshu, Douyin, and WeChat Channels are high-value opportunity sources, but they should not be treated as ordinary open feeds.
+
+| Platform | Broad Public Discovery | Owned/Authorized Data | Best Current Use |
+|----------|------------------------|-----------------------|------------------|
+| Xiaohongshu | manual only in this project | Ark merchant order API and mini-app platform are planned | consumer language, ecommerce revenue proof, owned funnel tests |
+| Douyin | planned only through approved official search capability | open video data requires user authorization | short-video demand discovery, owned content validation |
+| WeChat Channels | manual only in this project | Channels Assistant, mini-program capabilities, and Store APIs are scoped to owned/authorized accounts | private-domain validation, livestream/content review, store revenue proof |
+
+Implementation rule: do not promote a restricted platform source to `active` until the adapter uses an official or explicitly authorized access path, stores only the minimum auditable fields, and has tests for rate limits, redaction, and failure modes.
 
 Selection rule: promote sources to `active` only after adapter behavior, access stability, and tests are clear.
 

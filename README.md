@@ -182,7 +182,7 @@ ODE 的核心差异化：不仅评估，还启发。
 ## Test Suite
 
 ```bash
-python3 -m pytest tests/ -v    # 120 tests
+python3 -m pytest tests/ -v    # 121 tests
 ```
 
 | Test File | Tests | Coverage |
@@ -194,7 +194,7 @@ python3 -m pytest tests/ -v    # 120 tests
 | `tests/test_import_integration.py` | 2 | 外部导入素材到 ODE 七阶段计划的契约 |
 | `tests/test_project_structure.py` | 3 | 仓库层级边界、运行产物追踪检查 |
 | `tests/test_service.py` | 43 | service layer、实验记录、实际财务数据、gate refresh |
-| `tests/test_source_registry.py` | 6 | 数据源注册表、地区过滤、runtime source ids、scanner source_id |
+| `tests/test_source_registry.py` | 7 | 数据源注册表、地区过滤、runtime source ids、受限平台源、scanner source_id |
 
 ---
 

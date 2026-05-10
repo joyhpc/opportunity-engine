@@ -42,10 +42,13 @@ def test_region_filter_lists_china_sources():
     sources = list_sources(region="china")
     source_ids = {source.id for source in sources}
 
-    assert len(sources) >= 20
+    assert len(sources) >= 27
     assert "cn_36kr_newsflash" in source_ids
     assert "cn_v2ex_hot" in source_ids
     assert "cn_gov_policy" in source_ids
+    assert "cn_xiaohongshu_ark_order_api" in source_ids
+    assert "cn_douyin_video_search_api" in source_ids
+    assert "cn_wechat_channels_assistant_manual" in source_ids
     assert all(source.region == "china" for source in sources)
 
 
@@ -55,8 +58,28 @@ def test_service_region_filter_lists_china_sources():
     result = asyncio.run(service.list_data_sources(region="china"))
 
     assert result["ok"] is True
-    assert len(result["data"]["sources"]) >= 20
+    assert len(result["data"]["sources"]) >= 27
     assert all(source["region"] == "china" for source in result["data"]["sources"])
+
+
+def test_restricted_social_platform_sources_are_not_runtime_sources():
+    from ode.tools.source_registry import get_source, runtime_source_ids
+
+    runtime_ids = runtime_source_ids()
+
+    douyin_search = get_source("cn_douyin_video_search_api")
+    xhs_orders = get_source("cn_xiaohongshu_ark_order_api")
+    channels_manual = get_source("cn_wechat_channels_assistant_manual")
+
+    assert douyin_search is not None
+    assert douyin_search.status == "planned"
+    assert douyin_search.access_method == "official_api_approved_scope"
+    assert xhs_orders is not None
+    assert xhs_orders.layer == "revenue_signal"
+    assert channels_manual is not None
+    assert channels_manual.status == "manual"
+    assert "cn_douyin_video_search_api" not in runtime_ids
+    assert "cn_xiaohongshu_ark_order_api" not in runtime_ids
 
 
 def test_scanner_signals_include_source_ids(monkeypatch):
