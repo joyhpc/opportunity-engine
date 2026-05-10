@@ -23,7 +23,10 @@ opportunity-engine/
 
 ```text
 ode/
-├── cli.py               # 命令行外壳: parse args, format terminal output
+├── cli.py               # 命令行入口: parse args and dispatch
+├── cli_parser.py        # argparse command definitions
+├── cli_handlers.py      # terminal text handlers over service.py
+├── cli_json.py          # raw JSON service output mode
 ├── service.py           # surface-neutral async API, no print/sys.exit
 ├── core/                # dataclasses, constants, YAML store
 ├── engine/              # pipeline DAG, gates, async workers, portfolio logic
@@ -40,7 +43,8 @@ The intended dependency direction is:
 
 ```text
 CLI/API/Skill/Web
-    -> service
+    -> parser/handler adapters
+        -> service
         -> engine + heuristics
             -> core + tools + data
                 -> external libraries
@@ -85,6 +89,8 @@ material.
 - Split CLI parser construction from command handlers when command count grows again.
 - Keep `service.py` as the single API used by CLI, MCP, API, and Claude Skill.
 - Add tests for JSON mode and error formatting before touching CLI internals.
+- Status: first pass complete. `ode/cli.py` is now a thin entrypoint and
+  behavior is covered by `tests/test_cli_surface.py`.
 
 ### Phase 2 - Import Promotion
 

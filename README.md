@@ -167,11 +167,12 @@ ODE 的核心差异化：不仅评估，还启发。
 ## Test Suite
 
 ```bash
-python3 -m pytest tests/ -v    # 106 tests
+python3 -m pytest tests/ -v    # 110 tests
 ```
 
 | Test File | Tests | Coverage |
 |-----------|-------|----------|
+| `tests/test_cli_surface.py` | 4 | CLI 入口拆分、parser 命令集合、JSON/text 模式 |
 | `tests/test_eldermind.py` | 33 | 核心模块：models, store, scorer, financials, gate, pipeline, cache, CLI |
 | `tests/test_heuristics.py` | 25 | 启发模块：explore, bridge, reframe, synthesize |
 | `tests/test_import_integration.py` | 2 | 外部导入素材到 ODE 七阶段计划的契约 |

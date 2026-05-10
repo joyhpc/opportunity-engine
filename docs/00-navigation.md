@@ -101,11 +101,12 @@ python3 -m ode portfolio
 ## Test Suite
 
 ```bash
-python3 -m pytest tests/ -v    # 106 tests, < 1s
+python3 -m pytest tests/ -v    # 110 tests, < 1s
 ```
 
 | Test File | Tests | Coverage |
 |-----------|-------|----------|
+| [`tests/test_cli_surface.py`](../tests/test_cli_surface.py) | 4 | CLI entrypoint split, parser command set, JSON/text modes |
 | [`tests/test_eldermind.py`](../tests/test_eldermind.py) | 33 | models, store, scorer, financials, gate, pipeline, cache, CLI |
 | [`tests/test_heuristics.py`](../tests/test_heuristics.py) | 25 | explore, bridge, reframe, synthesize |
 | [`tests/test_import_integration.py`](../tests/test_import_integration.py) | 2 | imported detector assets and closed-loop plan contract |
