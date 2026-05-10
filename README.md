@@ -91,6 +91,21 @@ python3 -m ode portfolio
 
 ---
 
+## Repository Layout
+
+当前仓库按四类边界组织：
+
+| Area | Purpose |
+|------|---------|
+| `ode/` | 正式产品包：CLI、service、engine、heuristics、tools、integrations |
+| `flows/`, `schemas/`, `examples/` | 可验证流程、数据契约和 golden examples |
+| `imports/` | 外部/历史项目审计素材，不作为第二个活跃产品维护 |
+| `prototypes/` | 原型实验区，不被运行时代码直接依赖 |
+
+详细层级和整理规则见 [docs/03-project-structure.md](docs/03-project-structure.md)。
+
+---
+
 ## Pipeline: 7-Stage Gate System
 
 ```
@@ -152,13 +167,16 @@ ODE 的核心差异化：不仅评估，还启发。
 ## Test Suite
 
 ```bash
-python3 -m pytest tests/ -v    # 58 tests
+python3 -m pytest tests/ -v    # 106 tests
 ```
 
 | Test File | Tests | Coverage |
 |-----------|-------|----------|
 | `tests/test_eldermind.py` | 33 | 核心模块：models, store, scorer, financials, gate, pipeline, cache, CLI |
 | `tests/test_heuristics.py` | 25 | 启发模块：explore, bridge, reframe, synthesize |
+| `tests/test_import_integration.py` | 2 | 外部导入素材到 ODE 七阶段计划的契约 |
+| `tests/test_project_structure.py` | 3 | 仓库层级边界、运行产物追踪检查 |
+| `tests/test_service.py` | 43 | service layer、实验记录、实际财务数据、gate refresh |
 
 ---
 

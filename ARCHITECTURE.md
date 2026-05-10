@@ -298,3 +298,13 @@ User types: /ode scan --keywords "AI,robotics"
 | Phase 4 | Done | Configuration externalization (YAML configs) |
 | Phase 5 | Done | Pipeline orchestration + JSON sidecar contracts |
 | Phase 6 | Done | Heuristic modules: explore, bridge, reframe, synthesize |
+
+## Repository Structure
+
+Operational repository boundaries are documented in
+[`docs/03-project-structure.md`](docs/03-project-structure.md). In short:
+
+- `ode/` is the only active runtime package.
+- `imports/` is audited legacy/source material.
+- `prototypes/` is experimental and must not be imported by runtime code.
+- `flows/`, `schemas/`, and `examples/` define reproducible contracts.

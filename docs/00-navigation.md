@@ -30,6 +30,9 @@ python3 -m ode portfolio
 | — | [README](../README.md) | 项目概览、Quick Start、CLI 参考 | 命令列表、评分维度、依赖 |
 | — | [ARCHITECTURE](../ARCHITECTURE.md) | 三层架构设计、数据流、模块关系 | 层次图、Gate 逻辑、数据模型、集成点 |
 | 01 | [Heuristic Design](01-heuristic-design.md) | 启发模块设计思路与应用笔记 | explore/bridge/reframe/synthesize |
+| 02 | [AI Storybook Product Plan](02-ai-storybook-product-plan.md) | 原型产品计划 | storybook prototype |
+| 03 | [Project Structure](03-project-structure.md) | 仓库层级、边界规则、清理路线 | ode/imports/prototypes/tests/tools |
+| — | [Import Integration](import-integration.md) | opportunity-detector 导入契约 | schema、golden example、validator |
 
 ---
 
@@ -98,13 +101,16 @@ python3 -m ode portfolio
 ## Test Suite
 
 ```bash
-python3 -m pytest tests/ -v    # 58 tests, < 1s
+python3 -m pytest tests/ -v    # 106 tests, < 1s
 ```
 
 | Test File | Tests | Coverage |
 |-----------|-------|----------|
 | [`tests/test_eldermind.py`](../tests/test_eldermind.py) | 33 | models, store, scorer, financials, gate, pipeline, cache, CLI |
 | [`tests/test_heuristics.py`](../tests/test_heuristics.py) | 25 | explore, bridge, reframe, synthesize |
+| [`tests/test_import_integration.py`](../tests/test_import_integration.py) | 2 | imported detector assets and closed-loop plan contract |
+| [`tests/test_project_structure.py`](../tests/test_project_structure.py) | 3 | repository hierarchy boundaries and artifact tracking |
+| [`tests/test_service.py`](../tests/test_service.py) | 43 | service API, experiments, actuals, gate refresh |
 
 ---
 
