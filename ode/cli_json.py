@@ -35,6 +35,27 @@ def run_json_mode(args) -> None:
             min_grade=getattr(args, "min_grade", None),
             top=getattr(args, "top", None),
         )),
+        "pain": lambda: asyncio.run(service.listen_pains(
+            hn_top=getattr(args, "hn_top", 50)
+            if getattr(args, "hn_top", None) is not None else 50,
+            subreddits=[
+                s.strip()
+                for s in args.reddit.split(",")
+            ] if getattr(args, "reddit", None) else None,
+            reddit_limit=getattr(args, "reddit_limit", 15)
+            if getattr(args, "reddit_limit", None) is not None else 15,
+            include_product_hunt=getattr(args, "product_hunt", True),
+            product_hunt_limit=getattr(args, "product_hunt_limit", 30)
+            if getattr(args, "product_hunt_limit", None) is not None else 30,
+            keywords=[
+                k.strip()
+                for k in args.keywords.split(",")
+            ] if getattr(args, "keywords", None) else None,
+            profile=_load_profile_arg(args),
+            min_grade=getattr(args, "min_grade", "E") or "E",
+            limit=getattr(args, "limit", 20)
+            if getattr(args, "limit", None) is not None else 20,
+        )),
         "portfolio": lambda: asyncio.run(service.get_portfolio()),
         "insights": lambda: asyncio.run(service.get_insights(args.opp_id)),
         "lens": lambda: asyncio.run(service.apply_lens(

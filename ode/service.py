@@ -370,6 +370,43 @@ async def explore_signals(*, hn_top: int = 30,
 
 
 # ---------------------------------------------------------------------------
+# Pain Listener
+# ---------------------------------------------------------------------------
+
+async def listen_pains(*, hn_top: int = 50,
+                       subreddits: list[str] | None = None,
+                       reddit_limit: int = 15,
+                       include_product_hunt: bool = True,
+                       product_hunt_limit: int = 30,
+                       keywords: list[str] | None = None,
+                       profile: dict | None = None,
+                       min_grade: str = "E",
+                       limit: int = 20) -> dict:
+    from ode.heuristics.pain_listener import listen_with_fetch, format_pain_report
+
+    loop = asyncio.get_running_loop()
+    result = await loop.run_in_executor(
+        None,
+        lambda: listen_with_fetch(
+            hn_top=hn_top,
+            subreddits=subreddits,
+            reddit_limit=reddit_limit,
+            include_product_hunt=include_product_hunt,
+            product_hunt_limit=product_hunt_limit,
+            keywords=keywords,
+            profile=profile,
+            min_grade=min_grade,
+            limit=limit,
+        ),
+    )
+
+    return _ok({
+        "result": result,
+        "formatted": format_pain_report(result),
+    })
+
+
+# ---------------------------------------------------------------------------
 # Insights
 # ---------------------------------------------------------------------------
 

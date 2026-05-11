@@ -47,6 +47,31 @@ sources:
       - Needs carefully selected subreddits.
       - Can be noisy or meme-driven.
 
+  - id: producthunt_feed
+    label: Product Hunt Public Feed
+    status: active
+    layer: launch_signal
+    adapter: ode.tools.trend_scanner.scan_producthunt
+    endpoint: "https://www.producthunt.com/feed"
+    auth: none
+    default_enabled: false
+    freshness: recent Product Hunt feed items
+    requires:
+      - pain listener or explicit scanner call
+    params:
+      - product_hunt_limit
+    strength_method: "feed position estimate: top 5 strong, top 15 medium, otherwise weak"
+    best_for:
+      - startup launches
+      - indie AI tools
+      - solution-side proxies for pain mapping
+      - competitor language
+    limitations:
+      - Launch attention is not revenue evidence.
+      - Public feed does not expose full vote/comment/topic metadata.
+      - Pain listener caps this as solution-side evidence until corroborated by user/community pain.
+      - Use GraphQL API later when token-backed launch metrics are needed.
+
   - id: google_trends
     label: Google Trends
     status: optional

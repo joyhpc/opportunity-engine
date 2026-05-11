@@ -13,9 +13,10 @@ ODE 的机会发现分两层：
 |-----------|--------|---------|------------------|-----------|
 | `hackernews_topstories` | active | `--hn-top > 0` | HN top stories through Firebase API | technical early adopters |
 | `reddit_hot_rss` | active | `--reddit "sub1,sub2"` | subreddit hot RSS posts | noisy community language |
+| `producthunt_feed` | active | `ode pain` with Product Hunt enabled | recent Product Hunt launches from the public Atom feed | solution-side launch bias |
 | `google_trends` | optional | `--keywords` plus optional `pytrends` dependency | search interest and rising queries | seed-keyword dependent |
 
-`ode scan` and `ode explore` currently call only those runtime sources.
+`ode scan` and `ode explore` call HN, Reddit, and optional Trends. `ode pain` calls HN, Reddit, and Product Hunt, then grades signals before ranking founder fit and grouping candidates into validation queues.
 
 ## Utility And Manual Sources
 
@@ -42,7 +43,7 @@ Mainstream platforms are covered first as a registry map, then promoted to activ
 |------|--------------------|----------------|
 | Global video/social | `youtube_data_api_search`, `tiktok_research_api`, `instagram_graph_hashtag_api`, `x_recent_search_api` | planned |
 | Global paid demand | `meta_ads_library_api`, `amazon_product_advertising_api`, `linkedin_marketing_api` | planned |
-| Global launches/apps | `producthunt_graphql`, `apple_itunes_search_api`, `google_play_developer_reviews` | planned |
+| Global launches/apps | `producthunt_feed`, `producthunt_graphql`, `apple_itunes_search_api`, `google_play_developer_reviews` | active/planned |
 | Global market intelligence | `crunchbase_paid`, `sensor_tower_paid`, `similarweb_paid`, `g2_manual`, `capterra_manual`, `indiehackers_manual` | planned/manual |
 | China content/social | `cn_douyin_video_search_api`, `cn_kuaishou_open_platform`, `cn_bilibili_ranking`, `cn_weibo_hot_search`, `cn_zhihu_hot`, `cn_xiaohongshu_manual`, `cn_wechat_channels_assistant_manual` | planned/manual |
 | China ecommerce/local | `cn_taobao_open_platform`, `cn_jd_open_platform`, `cn_pdd_open_platform`, `cn_1688_open_platform`, `cn_douyin_ecommerce_open_api`, `cn_kuaishou_ecommerce_open_api`, `cn_meituan_open_platform`, `cn_ele_me_open_platform`, `cn_wechat_store_api`, `cn_xiaohongshu_ark_order_api` | planned |
@@ -142,6 +143,14 @@ Run a scan using current runtime sources:
 ```bash
 python -m ode scan --keywords "AI agents,developer tools" --hn-top 50 --reddit "startup,SaaS,MachineLearning"
 ```
+
+Listen for pain signals and solution-side Product Hunt proxies:
+
+```bash
+python -m ode pain --reddit "SaaS,SideProject,microsaas,webdev" --hn-top 50 --min-grade D
+```
+
+`ode pain` treats Product Hunt as a solution-side source: even explicit launch-copy pain is capped below primary community evidence until a Reddit/HN/user quote confirms the painful job. It also downranks launch and success-story posts so revenue claims stay in the separate `ode cases` workflow.
 
 ## Signal Audit Fields
 

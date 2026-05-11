@@ -95,6 +95,25 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--keywords", help="Seed keywords (comma-separated)")
     p.add_argument("--output", help="Save report to file")
 
+    p = sub.add_parser("pain", help="Listen for pain points across Reddit/HN/Product Hunt")
+    p.add_argument("--hn-top", type=int, default=50, help="HackerNews top N")
+    p.add_argument("--reddit", help="Subreddits (comma-separated)")
+    p.add_argument("--reddit-limit", type=int, default=15, help="Posts per subreddit")
+    p.add_argument("--keywords", help="Profile/seed keywords (comma-separated)")
+    p.add_argument("--profile", help="Path to founder profile JSON")
+    p.add_argument("--profile-json", help="Inline founder profile JSON")
+    p.add_argument(
+        "--min-grade",
+        choices=["A", "B", "C", "D", "E"],
+        default="E",
+        help="Minimum evidence grade to include",
+    )
+    p.add_argument("--limit", type=int, default=20, help="Number of ranked signals")
+    p.add_argument("--product-hunt-limit", type=int, default=30, help="Product Hunt feed items")
+    p.add_argument("--product-hunt", dest="product_hunt", action="store_true", default=True)
+    p.add_argument("--no-product-hunt", dest="product_hunt", action="store_false")
+    p.add_argument("--output", help="Save report to file")
+
     p = sub.add_parser("insights", help="Generate insights for an opportunity")
     p.add_argument("opp_id", help="Opportunity ID or name")
 

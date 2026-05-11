@@ -137,6 +137,36 @@ class TestServiceExplore:
             assert "formatted" in result["data"]
 
 
+class TestServicePainListener:
+    def test_listen_pains_returns_ranked_report(self):
+        from ode.service import listen_pains
+        from unittest.mock import patch
+
+        fake_signals = [
+            {
+                "source_id": "reddit_hot_rss",
+                "source": "reddit/r/SaaS",
+                "title": "Looking for an AI tool to stop manually reconciling invoices, would pay for it",
+                "url": "https://example.com/reddit",
+            },
+            {
+                "source_id": "producthunt_feed",
+                "source": "producthunt",
+                "title": "InvoicePilot",
+                "summary": "AI workflow automation for invoice operations",
+                "url": "https://example.com/ph",
+                "rank": 3,
+            },
+        ]
+
+        with patch("ode.heuristics.pain_listener.fetch_pain_sources", return_value=fake_signals):
+            result = asyncio.run(listen_pains(hn_top=1, min_grade="E"))
+
+        assert result["ok"] is True
+        assert result["data"]["result"]["kept_signals"] >= 1
+        assert "Pain Listener Report" in result["data"]["formatted"]
+
+
 class TestServiceInsights:
     def test_insights_not_found(self):
         from ode.service import get_insights

@@ -9,6 +9,7 @@ def test_source_catalog_loads_active_and_planned_sources():
 
     assert by_id["hackernews_topstories"].status == "active"
     assert by_id["reddit_hot_rss"].status == "active"
+    assert by_id["producthunt_feed"].status == "active"
     assert by_id["google_trends"].status == "optional"
     assert by_id["arxiv_recent"].status == "planned"
 
@@ -19,6 +20,7 @@ def test_runtime_source_ids_only_include_scanner_sources():
     assert runtime_source_ids() == {
         "google_trends",
         "hackernews_topstories",
+        "producthunt_feed",
         "reddit_hot_rss",
     }
 
@@ -31,6 +33,7 @@ def test_service_lists_data_sources():
     assert result["ok"] is True
     assert {source["id"] for source in result["data"]["sources"]} == {
         "hackernews_topstories",
+        "producthunt_feed",
         "reddit_hot_rss",
     }
     assert "Opportunity Data Sources" in result["data"]["formatted"]
@@ -135,3 +138,62 @@ def test_scanner_signals_include_source_ids(monkeypatch):
 
     assert signals[0]["source_id"] == "hackernews_topstories"
     assert signals[0]["source"] == "hackernews"
+
+
+def test_producthunt_feed_scanner_includes_source_id(monkeypatch):
+    from ode.tools import trend_scanner
+
+    class FakeResponse:
+        status_code = 200
+        text = """<?xml version="1.0" encoding="UTF-8"?>
+        <feed xmlns="http://www.w3.org/2005/Atom">
+          <entry>
+            <id>tag:www.producthunt.com,2005:Post/1</id>
+            <published>2026-05-10T00:00:00-07:00</published>
+            <updated>2026-05-10T00:00:00-07:00</updated>
+            <link rel="alternate" type="text/html" href="https://www.producthunt.com/products/test"/>
+            <title>Agent Debugger</title>
+            <content type="html"><p>Debug AI agent workflow failures</p></content>
+          </entry>
+        </feed>"""
+
+    def fake_get(url, timeout=10, **kwargs):
+        return FakeResponse()
+
+    monkeypatch.setattr("requests.get", fake_get)
+
+    signals = trend_scanner.scan_producthunt(limit=1)
+
+    assert signals[0]["source_id"] == "producthunt_feed"
+    assert signals[0]["source"] == "producthunt"
+    assert signals[0]["summary"] == "Debug AI agent workflow failures"
+
+
+def test_reddit_scanner_keeps_feed_summary(monkeypatch):
+    from ode.tools import trend_scanner
+
+    class FakeResponse:
+        status_code = 200
+        text = """<?xml version="1.0" encoding="UTF-8"?>
+        <feed xmlns="http://www.w3.org/2005/Atom">
+          <entry>
+            <id>t3_test</id>
+            <published>2026-05-10T00:00:00Z</published>
+            <updated>2026-05-10T00:00:00Z</updated>
+            <author><name>builder</name></author>
+            <link href="https://www.reddit.com/r/SaaS/comments/test/post/"/>
+            <title>Need a better AI workflow</title>
+            <content type="html"><p>Manually copy paste invoices every week.</p></content>
+          </entry>
+        </feed>"""
+
+    def fake_get(url, headers=None, timeout=10, **kwargs):
+        return FakeResponse()
+
+    monkeypatch.setattr("requests.get", fake_get)
+
+    signals = trend_scanner.scan_reddit(["SaaS"], limit=1)
+
+    assert signals[0]["source_id"] == "reddit_hot_rss"
+    assert signals[0]["summary"] == "Manually copy paste invoices every week."
+    assert signals[0]["author"] == "builder"

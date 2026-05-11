@@ -61,6 +61,7 @@ def test_parser_exposes_expected_commands():
         "portfolio",
         "compare",
         "explore",
+        "pain",
         "insights",
         "lens",
         "experiment",

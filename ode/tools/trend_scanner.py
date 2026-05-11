@@ -7,7 +7,9 @@ Returns structured signal dicts suitable for Signal model.
 from __future__ import annotations
 
 import logging
+import html
 import os
+import re
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
@@ -118,16 +120,21 @@ def scan_hackernews(top_n: int = 30) -> list[dict]:
                 if not item or not isinstance(item, dict):
                     return None
                 score = item.get("score", 0)
+                hn_item_url = f"https://news.ycombinator.com/item?id={sid}"
                 return {
                     "source_id": "hackernews_topstories",
                     "source": "hackernews",
                     "keyword": "",
                     "title": item.get("title", ""),
-                    "url": item.get("url", ""),
+                    "url": item.get("url") or hn_item_url,
+                    "summary": _clean_feed_text(item.get("text", "")),
                     "score": score,
                     "comments": item.get("descendants", 0),
                     "strength": "强" if score > 200 else "中" if score > 50 else "弱",
                     "momentum": 0,
+                    "type": item.get("type", ""),
+                    "external_id": str(sid),
+                    "discussion_url": hn_item_url,
                     "time": datetime.fromtimestamp(item.get("time", 0)).isoformat(),
                 }
             except Exception:
@@ -178,8 +185,16 @@ def scan_reddit(subreddits: list[str], limit: int = 10) -> list[dict]:
             for position, entry in enumerate(entries[:limit]):
                 title_el = entry.find("atom:title", ns)
                 link_el = entry.find("atom:link", ns)
-                title = title_el.text if title_el is not None else ""
+                content_el = entry.find("atom:content", ns)
+                published_el = entry.find("atom:published", ns)
+                updated_el = entry.find("atom:updated", ns)
+                id_el = entry.find("atom:id", ns)
+                author_el = entry.find("atom:author/atom:name", ns)
+                title = _clean_feed_text(title_el.text if title_el is not None else "")
                 url = link_el.get("href", "") if link_el is not None else ""
+                summary = ""
+                if content_el is not None:
+                    summary = _clean_feed_text(" ".join(content_el.itertext()))
 
                 # RSS doesn't include score/comments, estimate from position
                 estimated_strength = "强" if position < 3 else "中" if position < 7 else "弱"
@@ -190,13 +205,100 @@ def scan_reddit(subreddits: list[str], limit: int = 10) -> list[dict]:
                     "keyword": "",
                     "title": title,
                     "url": url,
+                    "summary": summary,
                     "score": 0,
                     "comments": 0,
                     "strength": estimated_strength,
                     "momentum": 0,
+                    "rank": position + 1,
+                    "author": author_el.text if author_el is not None else "",
+                    "published": published_el.text if published_el is not None else "",
+                    "updated": updated_el.text if updated_el is not None else "",
+                    "external_id": id_el.text if id_el is not None else "",
                 })
         except Exception as e:
             logger.warning("Reddit r/%s scan failed: %s", sub, e)
+
+    return results
+
+
+# ---------------------------------------------------------------------------
+# Product Hunt
+# ---------------------------------------------------------------------------
+
+def _clean_feed_text(value: str) -> str:
+    """Collapse Atom/HTML text into a short readable snippet."""
+
+    text = html.unescape(value or "")
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    text = re.sub(r"\s*Read more on Product Hunt.*$", "", text, flags=re.I)
+    text = re.sub(r"\s*(Discussion\s*\|\s*Link|Discussion|Link)\s*$", "", text, flags=re.I)
+    return text
+
+
+def scan_producthunt(limit: int = 30,
+                     feed_url: str = "https://www.producthunt.com/feed") -> list[dict]:
+    """Scan Product Hunt's public Atom feed for recent launches.
+
+    Product Hunt's official GraphQL API needs an access token.  The public
+    feed is intentionally treated as a weak launch/solution-side signal: it
+    helps spot what makers are shipping, but does not prove revenue or pain.
+    """
+
+    try:
+        import requests
+        import xml.etree.ElementTree as ET
+    except ImportError:
+        logger.warning("requests not installed: pip install requests")
+        return []
+
+    results = []
+    headers = {"User-Agent": "ode-opportunity-engine/0.1"}
+    ns = {"atom": "http://www.w3.org/2005/Atom"}
+
+    try:
+        resp = requests.get(feed_url, headers=headers, timeout=10)
+        if resp.status_code != 200:
+            logger.warning("Product Hunt feed returned %s", resp.status_code)
+            return results
+
+        root = ET.fromstring(resp.text)
+        entries = root.findall("atom:entry", ns)
+
+        for position, entry in enumerate(entries[:limit]):
+            title_el = entry.find("atom:title", ns)
+            link_el = entry.find("atom:link", ns)
+            content_el = entry.find("atom:content", ns)
+            published_el = entry.find("atom:published", ns)
+            updated_el = entry.find("atom:updated", ns)
+            id_el = entry.find("atom:id", ns)
+
+            title = _clean_feed_text(title_el.text if title_el is not None else "")
+            url = link_el.get("href", "") if link_el is not None else ""
+            snippet = ""
+            if content_el is not None:
+                snippet = _clean_feed_text(" ".join(content_el.itertext()))
+
+            strength = "strong" if position < 5 else "medium" if position < 15 else "weak"
+            results.append({
+                "source_id": "producthunt_feed",
+                "source": "producthunt",
+                "keyword": title,
+                "title": title,
+                "url": url,
+                "summary": snippet,
+                "score": 0,
+                "comments": 0,
+                "rank": position + 1,
+                "strength": strength,
+                "momentum": 0,
+                "published": published_el.text if published_el is not None else "",
+                "updated": updated_el.text if updated_el is not None else "",
+                "external_id": id_el.text if id_el is not None else "",
+            })
+    except Exception as e:
+        logger.warning("Product Hunt scan failed: %s", e)
 
     return results
 

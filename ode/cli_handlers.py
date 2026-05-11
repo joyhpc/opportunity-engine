@@ -273,6 +273,33 @@ def cmd_explore(args):
         print(f"\nSaved to: {args.output}", file=sys.stderr)
 
 
+def cmd_pain(args):
+    """Listen for pain points across Reddit, HN, and Product Hunt."""
+    subreddits = [s.strip() for s in args.reddit.split(",")] if args.reddit else None
+    keywords = [k.strip() for k in args.keywords.split(",")] if args.keywords else None
+    profile = _load_profile_arg(args)
+
+    print("Listening for pain signals from Reddit, HN, and Product Hunt...", file=sys.stderr)
+    result = asyncio.run(service.listen_pains(
+        hn_top=args.hn_top if args.hn_top is not None else 50,
+        subreddits=subreddits,
+        reddit_limit=args.reddit_limit if args.reddit_limit is not None else 15,
+        include_product_hunt=args.product_hunt,
+        product_hunt_limit=args.product_hunt_limit if args.product_hunt_limit is not None else 30,
+        keywords=keywords,
+        profile=profile,
+        min_grade=args.min_grade or "E",
+        limit=args.limit if args.limit is not None else 20,
+    ))
+
+    report = result["data"]["formatted"]
+    print(report)
+
+    if args.output:
+        Path(args.output).write_text(report, encoding="utf-8")
+        print(f"\nSaved to: {args.output}", file=sys.stderr)
+
+
 def cmd_insights(args):
     """Generate insights (contradictions + blind spots) for an opportunity."""
     from ode.heuristics.synthesize import format_synthesis_report
@@ -374,6 +401,7 @@ COMMANDS = {
     "portfolio": cmd_portfolio,
     "compare": cmd_compare,
     "explore": cmd_explore,
+    "pain": cmd_pain,
     "insights": cmd_insights,
     "lens": cmd_lens,
     "experiment": cmd_experiment,
