@@ -111,20 +111,21 @@ python3 -m ode portfolio
 ## Test Suite
 
 ```bash
-python3 -m pytest tests/ -v    # 126 tests, < 2s
+python3 -m pytest tests/ -v    # 152 tests, < 3s
 ```
 
 | Test File | Tests | Coverage |
 |-----------|-------|----------|
-| [`tests/test_cli_surface.py`](../tests/test_cli_surface.py) | 4 | CLI entrypoint split, parser command set, JSON/text modes |
+| [`tests/test_cli_surface.py`](../tests/test_cli_surface.py) | 7 | CLI entrypoint split, parser command set, JSON/text modes, pain grade/profile errors |
 | [`tests/test_eldermind.py`](../tests/test_eldermind.py) | 33 | models, store, scorer, financials, gate, pipeline, cache, CLI |
 | [`tests/test_fit_lens.py`](../tests/test_fit_lens.py) | 4 | Founder Fit Lens classification, wildcard protection, service integration |
-| [`tests/test_heuristics.py`](../tests/test_heuristics.py) | 25 | explore, bridge, reframe, synthesize |
+| [`tests/test_heuristics.py`](../tests/test_heuristics.py) | 51 | explore, bridge, reframe, synthesize |
 | [`tests/test_import_integration.py`](../tests/test_import_integration.py) | 2 | imported detector assets and closed-loop plan contract |
+| [`tests/test_pain_listener.py`](../tests/test_pain_listener.py) | 12 | pain listener grading, launch downranking, validation queues, founder fit |
 | [`tests/test_project_structure.py`](../tests/test_project_structure.py) | 3 | repository hierarchy boundaries and artifact tracking |
 | [`tests/test_revenue_cases.py`](../tests/test_revenue_cases.py) | 4 | revenue evidence grading, filtering, service integration, custom case files |
-| [`tests/test_service.py`](../tests/test_service.py) | 43 | service API, experiments, actuals, gate refresh |
-| [`tests/test_source_registry.py`](../tests/test_source_registry.py) | 8 | source registry, region filter, runtime source ids, mainstream/restricted platform sources, scanner source_id |
+| [`tests/test_service.py`](../tests/test_service.py) | 19 | service API, experiments, actuals, gate refresh, pain listener |
+| [`tests/test_source_registry.py`](../tests/test_source_registry.py) | 17 | source registry, region filter, runtime contexts, adapter dispatch, scanner source_id, source failure notes |
 
 ---
 

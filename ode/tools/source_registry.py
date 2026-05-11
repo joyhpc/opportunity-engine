@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
+import importlib
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import yaml
 
@@ -46,7 +47,8 @@ class DataSource:
     best_for: list[str]
     limitations: list[str]
     region: str = "global"
-    language: list[str] = None
+    contexts: list[str] = field(default_factory=list)
+    language: list[str] = field(default_factory=list)
     access_method: str = "unknown"
 
     def to_dict(self) -> dict[str, Any]:
@@ -78,6 +80,7 @@ def load_source_catalog(path: str | Path | None = None) -> list[DataSource]:
         seen.add(raw["id"])
         optional = {
             "region": raw.get("region", "global"),
+            "contexts": raw.get("contexts", []),
             "language": raw.get("language", []),
             "access_method": raw.get("access_method", "unknown"),
         }
@@ -109,12 +112,33 @@ def get_source(source_id: str) -> DataSource | None:
     return None
 
 
-def runtime_source_ids() -> set[str]:
-    """Source ids currently called by scan workers."""
+def sources_for_context(context: str) -> list[DataSource]:
+    """Return runtime sources declared for one entrypoint context."""
+
+    return [
+        source
+        for source in load_source_catalog()
+        if context in source.contexts
+    ]
+
+
+def load_source_adapter(source: DataSource) -> Callable[..., list[dict]]:
+    """Load the Python callable declared by a source's adapter path."""
+
+    module_name, function_name = source.adapter.rsplit(".", 1)
+    module = importlib.import_module(module_name)
+    adapter = getattr(module, function_name)
+    if not callable(adapter):
+        raise TypeError(f"Source adapter is not callable: {source.adapter}")
+    return adapter
+
+
+def runtime_source_ids(context: str = "scan_worker") -> set[str]:
+    """Source ids currently called by a runtime context."""
 
     return {
         source.id
-        for source in load_source_catalog()
+        for source in sources_for_context(context)
         if source.status in {"active", "optional"}
     }
 
@@ -125,20 +149,21 @@ def format_source_catalog(sources: list[DataSource]) -> str:
     lines = [
         "# Opportunity Data Sources",
         "",
-        "| Status | Region | ID | Layer | Default | Adapter |",
-        "|--------|--------|----|-------|---------|---------|",
+        "| Status | Region | ID | Layer | Contexts | Default | Adapter |",
+        "|--------|--------|----|-------|----------|---------|---------|",
     ]
     for source in sources:
         default = "yes" if source.default_enabled else "no"
+        contexts = ", ".join(source.contexts) or "-"
         lines.append(
-            f"| {source.status} | {source.region} | {source.id} | {source.layer} | {default} | {source.adapter} |"
+            f"| {source.status} | {source.region} | {source.id} | {source.layer} | {contexts} | {default} | {source.adapter} |"
         )
     lines.extend([
         "",
         "Statuses:",
-        "- active: called by scan workers when required CLI params are provided",
+        "- active: called by at least one declared runtime context when required CLI params are provided",
         "- optional: called only when optional dependencies and seed inputs exist",
-        "- utility: available helper, not part of scan workers today",
+        "- utility: available helper, not part of runtime contexts today",
         "- manual: human-curated local signal path",
         "- planned: deliberately listed but not yet scanned",
     ])

@@ -10,329 +10,29 @@ from __future__ import annotations
 
 import re
 from collections import Counter, defaultdict
-from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from typing import Any
 
+from ode.core.recommendations import MAP_TO_PAIN, RESEARCH_NEXT, VALIDATE_NOW, WATCH
 from ode.heuristics.fit_lens import FounderProfile
-
-
-DEFAULT_REDDIT_SUBS = [
-    "SaaS",
-    "SideProject",
-    "microsaas",
-    "startups",
-    "Entrepreneur",
-    "ProductManagement",
-    "webdev",
-    "ArtificialInteligence",
-    "LocalLLaMA",
-]
-
-DEFAULT_PROFILE_KEYWORDS = [
-    "AI agents",
-    "developer tools",
-    "automation",
-    "knowledge systems",
-    "vertical SaaS",
-    "workflow",
-]
-
-GRADE_STRENGTH = {"A": 5, "B": 4, "C": 3, "D": 2, "E": 1}
-
-PAIN_PHRASES = [
-    "pain",
-    "painful",
-    "problem",
-    "struggle",
-    "struggling",
-    "frustrating",
-    "annoying",
-    "hate",
-    "hard to",
-    "too hard",
-    "difficult",
-    "broken",
-    "slow",
-    "messy",
-    "manual",
-    "tedious",
-    "repetitive",
-    "bottleneck",
-    "overwhelming",
-    "doesn't work",
-    "time consuming",
-    "takes too long",
-    "waste time",
-    "too expensive",
-    "expensive",
-    "can't",
-    "can't find",
-    "cannot find",
-    "wish there was",
-    "looking for",
-    "any tool",
-    "need a",
-    "need to",
-    "need help",
-    "is there a",
-    "does anyone know",
-    "recommend",
-    "best way to",
-    "alternative to",
-    "how do i",
-    "how to",
-    "help with",
-]
-
-BUYER_PHRASES = [
-    "pay for",
-    "would pay",
-    "paid",
-    "budget",
-    "pricing",
-    "subscription",
-    "invoice",
-    "mrr",
-    "arr",
-    "revenue",
-    "contract",
-    "purchase",
-    "$",
-]
-
-COMMERCIAL_CONTEXT_PHRASES = [
-    "customer",
-    "client",
-    "agency",
-    "founder",
-    "team",
-    "business",
-    "b2b",
-    "sales",
-    "operator",
-    "workflow",
-]
-
-SUCCESS_STORY_PHRASES = [
-    "made my first internet money",
-    "couldn't be happier",
-    "i made",
-    "we made",
-    "i built",
-    "we built",
-    "i launched",
-    "we launched",
-    "just launched",
-    "my saas",
-    "our saas",
-    "show hn",
-]
-
-REQUEST_INTENT_PHRASES = [
-    "looking for",
-    "need a",
-    "need to",
-    "need help",
-    "any tool",
-    "is there a",
-    "does anyone know",
-    "how do i",
-    "how to",
-    "recommend",
-    "?",
-]
-
-WORKAROUND_PHRASES = [
-    "spreadsheet",
-    "notion",
-    "zapier",
-    "airtable",
-    "manual process",
-    "copy paste",
-    "workaround",
-    "script",
-    "hack together",
-    "glue",
-]
-
-URGENCY_PHRASES = [
-    "urgent",
-    "asap",
-    "deadline",
-    "blocked",
-    "blocking",
-    "production",
-    "lost",
-    "churn",
-    "cancel",
-]
-
-DOMAIN_SEEDS = {
-    "ai_agents": [
-        "ai agent",
-        "agent",
-        "llm",
-        "gpt",
-        "rag",
-        "prompt",
-        "chatbot",
-        "copilot",
-        "autonomous",
-    ],
-    "developer_tools": [
-        "developer",
-        "api",
-        "sdk",
-        "github",
-        "code",
-        "debug",
-        "deploy",
-        "devtool",
-        "ci",
-        "database",
-        "observability",
-    ],
-    "automation": [
-        "automation",
-        "workflow",
-        "zapier",
-        "integrate",
-        "integration",
-        "manual",
-        "ops",
-    ],
-    "knowledge_systems": [
-        "knowledge",
-        "docs",
-        "documentation",
-        "wiki",
-        "search",
-        "notes",
-        "retrieval",
-    ],
-    "vertical_saas": [
-        "saas",
-        "crm",
-        "customer",
-        "invoice",
-        "booking",
-        "clinic",
-        "agency",
-        "real estate",
-        "law firm",
-    ],
-    "creator_tools": [
-        "creator",
-        "video",
-        "podcast",
-        "newsletter",
-        "content",
-        "social media",
-    ],
-    "sales_marketing": [
-        "lead",
-        "sales",
-        "email",
-        "outreach",
-        "campaign",
-        "ads",
-        "seo",
-    ],
-    "customer_support": [
-        "support",
-        "ticket",
-        "helpdesk",
-        "chat",
-        "handoff",
-        "routing",
-    ],
-}
-
-
-@dataclass
-class PainSignal:
-    title: str
-    url: str = ""
-    source: str = ""
-    source_id: str = ""
-    source_type: str = ""
-    snippet: str = ""
-    audience: str = ""
-    pain_markers: list[str] = field(default_factory=list)
-    buyer_markers: list[str] = field(default_factory=list)
-    commercial_markers: list[str] = field(default_factory=list)
-    downrank_markers: list[str] = field(default_factory=list)
-    workaround_markers: list[str] = field(default_factory=list)
-    urgency_markers: list[str] = field(default_factory=list)
-    keyword_matches: list[str] = field(default_factory=list)
-    tags: list[str] = field(default_factory=list)
-    pain_score: float = 0.0
-    founder_fit: float = 0.0
-    priority_score: float = 0.0
-    evidence_grade: str = "E"
-    cluster_size: int = 1
-    source_diversity: int = 1
-    recommendation: str = "Watch"
-    reasons: list[str] = field(default_factory=list)
-    next_actions: list[str] = field(default_factory=list)
-    raw_data: dict[str, Any] = field(default_factory=dict)
-
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
-
-
-def fetch_pain_sources(
-    *,
-    hn_top: int = 50,
-    subreddits: list[str] | None = None,
-    reddit_limit: int = 15,
-    include_product_hunt: bool = True,
-    product_hunt_limit: int = 30,
-) -> list[dict[str, Any]]:
-    """Fetch raw signals from the supported pain-listener sources."""
-
-    from ode.tools.trend_scanner import scan_hackernews, scan_producthunt, scan_reddit
-
-    signals: list[dict[str, Any]] = []
-    if hn_top and hn_top > 0:
-        signals.extend(scan_hackernews(hn_top))
-    if subreddits:
-        signals.extend(scan_reddit(subreddits, limit=reddit_limit))
-    if include_product_hunt:
-        signals.extend(scan_producthunt(limit=product_hunt_limit))
-    return signals
-
-
-def listen_with_fetch(
-    *,
-    hn_top: int = 50,
-    subreddits: list[str] | None = None,
-    reddit_limit: int = 15,
-    include_product_hunt: bool = True,
-    product_hunt_limit: int = 30,
-    keywords: list[str] | None = None,
-    profile: FounderProfile | dict[str, Any] | None = None,
-    min_grade: str = "E",
-    limit: int = 20,
-) -> dict[str, Any]:
-    """Fetch sources, then run the pure listener analysis."""
-
-    subs = subreddits or DEFAULT_REDDIT_SUBS
-    signals = fetch_pain_sources(
-        hn_top=hn_top,
-        subreddits=subs,
-        reddit_limit=reddit_limit,
-        include_product_hunt=include_product_hunt,
-        product_hunt_limit=product_hunt_limit,
-    )
-    return listen(
-        signals,
-        profile=profile,
-        keywords=keywords,
-        min_grade=min_grade,
-        limit=limit,
-    )
+from ode.heuristics.pain_models import PainSignal
+from ode.heuristics.pain_taxonomy import (
+    BUYER_PHRASES,
+    COMMERCIAL_CONTEXT_PHRASES,
+    DEFAULT_PROFILE_KEYWORDS,
+    DEFAULT_REDDIT_SUBS,
+    DOMAIN_SEEDS,
+    GRADE_STRENGTH,
+    PAIN_PHRASES,
+    REQUEST_INTENT_PHRASES,
+    REQUEST_PHRASES,
+    STRONG_SUCCESS_STORY_PHRASES,
+    SUCCESS_STORY_PHRASES,
+    THRESHOLDS,
+    URGENCY_PHRASES,
+    VALID_EVIDENCE_GRADES,
+    WORKAROUND_PHRASES,
+)
 
 
 def listen(
@@ -342,12 +42,18 @@ def listen(
     keywords: list[str] | None = None,
     min_grade: str = "E",
     limit: int = 20,
+    source_events: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Analyze already-fetched signals for pain, evidence, and founder fit."""
 
     founder = profile if isinstance(profile, FounderProfile) else FounderProfile.from_dict(profile)
     keywords = keywords or DEFAULT_PROFILE_KEYWORDS
     min_grade = (min_grade or "E").upper()
+    if min_grade not in GRADE_STRENGTH:
+        raise ValueError(
+            f"Unsupported pain evidence grade '{min_grade}'. "
+            f"Use one of: {', '.join(VALID_EVIDENCE_GRADES)}."
+        )
 
     unique = _dedupe_signals(signals)
     analyzed = [
@@ -389,13 +95,8 @@ def listen(
         "keywords": keywords,
         "top_signals": [signal.to_dict() for signal in top],
         "all_signals": [signal.to_dict() for signal in filtered],
-        "source_notes": [
-            "Reddit/HN are community-language signals, usually D or C when pain and buyer intent are explicit.",
-            "Product Hunt feed items are launch/solution-side proxies, usually E unless the text itself states pain.",
-            "Commercial context such as customers or teams boosts fit but is not buyer intent by itself.",
-            "Launch and success-story posts are downranked; use the revenue-case workflow for money claims.",
-            "No social signal is treated as verified revenue evidence.",
-        ],
+        "source_events": source_events or [],
+        "source_notes": _source_notes(source_events or []),
     }
 
 
@@ -414,6 +115,7 @@ def analyze_signal(
     text = _signal_text(signal)
 
     pain_markers = _phrase_hits(PAIN_PHRASES, text)
+    request_markers = _phrase_hits(REQUEST_PHRASES, text)
     buyer_markers = _phrase_hits(BUYER_PHRASES, text)
     commercial_markers = _phrase_hits(COMMERCIAL_CONTEXT_PHRASES, text)
     downrank_markers = _downrank_markers(title, text)
@@ -427,6 +129,7 @@ def analyze_signal(
     audience = _audience(source_id, source)
 
     marker_score = min(len(pain_markers) * 9, 36)
+    request_score = min(len(request_markers) * 4, 12)
     buyer_score = min(len(buyer_markers) * 8, 24)
     commercial_score = min(len(commercial_markers) * 3, 9)
     workaround_score = min(len(workaround_markers) * 7, 18)
@@ -440,6 +143,7 @@ def analyze_signal(
     pain_score = _clamp(
         18
         + marker_score
+        + request_score
         + buyer_score
         + commercial_score
         + workaround_score
@@ -454,6 +158,7 @@ def analyze_signal(
     evidence_grade = _evidence_grade(
         source_id=source_id,
         pain_markers=pain_markers,
+        request_markers=request_markers,
         buyer_markers=buyer_markers,
         commercial_markers=commercial_markers,
         downrank_markers=downrank_markers,
@@ -473,6 +178,7 @@ def analyze_signal(
         snippet=snippet,
         audience=audience,
         pain_markers=pain_markers,
+        request_markers=request_markers,
         buyer_markers=buyer_markers,
         commercial_markers=commercial_markers,
         downrank_markers=downrank_markers,
@@ -494,13 +200,20 @@ def format_pain_report(result: dict[str, Any]) -> str:
     """Format listener output as a markdown report."""
 
     if result.get("status") != "ok":
-        return "\n".join([
+        lines = [
             "# Pain Listener Report",
             "",
             "No pain signals survived the evidence filter.",
             f"Raw signals scanned: {result.get('total_raw_signals', 0)}",
             f"Evidence filter: >= {result.get('min_grade', 'E')}",
-        ])
+        ]
+        if result.get("source_notes"):
+            lines.extend(["", "## Caveats"])
+            lines.extend([f"- {note}" for note in result["source_notes"]])
+        if result.get("source_events"):
+            lines.extend(["", "## Source Events"])
+            lines.extend([f"- {_source_event_line(event)}" for event in result["source_events"]])
+        return "\n".join(lines)
 
     lines = [
         "# Pain Listener Report",
@@ -584,6 +297,9 @@ def format_pain_report(result: dict[str, Any]) -> str:
     if result.get("source_notes"):
         lines.extend(["", "## Caveats"])
         lines.extend([f"- {note}" for note in result["source_notes"]])
+    if result.get("source_events"):
+        lines.extend(["", "## Source Events"])
+        lines.extend([f"- {_source_event_line(event)}" for event in result["source_events"]])
 
     return "\n".join(lines)
 
@@ -602,18 +318,60 @@ def _dedupe_signals(signals: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return unique
 
 
+def _source_notes(source_events: list[dict[str, Any]]) -> list[str]:
+    notes = [
+        "Reddit/HN are community-language signals, usually D or C when pain and buyer intent are explicit.",
+        "Product Hunt feed items are launch/solution-side proxies, usually E unless the text itself states pain.",
+        "Commercial context such as customers or teams boosts fit but is not buyer intent by itself.",
+        "Launch and success-story posts are downranked; use the revenue-case workflow for money claims.",
+        "No social signal is treated as verified revenue evidence.",
+    ]
+    failures = [
+        event for event in source_events
+        if event.get("status") in {"failed", "unavailable"}
+    ]
+    for event in failures:
+        source_id = event.get("source_id", "unknown")
+        reason = event.get("reason") or event.get("status")
+        detail = ""
+        if event.get("http_status"):
+            detail = f" HTTP {event['http_status']}"
+        if event.get("subreddit"):
+            detail = f" r/{event['subreddit']}{detail}"
+        notes.append(f"{source_id} did not return usable data ({reason}{detail}).")
+    return notes
+
+
+def _source_event_line(event: dict[str, Any]) -> str:
+    source_id = event.get("source_id", "unknown")
+    status = event.get("status", "unknown")
+    count = event.get("count")
+    reason = event.get("reason", "")
+    suffix = f", count={count}" if count is not None else ""
+    if event.get("http_status"):
+        suffix += f", http={event['http_status']}"
+    if event.get("subreddit"):
+        suffix += f", subreddit={event['subreddit']}"
+    if reason:
+        suffix += f", reason={reason}"
+    return f"{source_id}: {status}{suffix}"
+
+
 def _worth_keeping(signal: PainSignal) -> bool:
     if signal.downrank_markers and signal.evidence_grade == "E":
         return False
     if signal.evidence_grade in {"C", "D"}:
         return True
     if (signal.pain_markers or signal.buyer_markers or signal.workaround_markers) and (
-        signal.tags or signal.keyword_matches or signal.founder_fit >= 52 or signal.priority_score >= 48
+        signal.tags
+        or signal.keyword_matches
+        or signal.founder_fit >= THRESHOLDS.keep_founder_fit_min
+        or signal.priority_score >= THRESHOLDS.keep_priority_min
     ):
         return True
     if signal.source_id == "producthunt_feed" and (signal.keyword_matches or signal.tags):
         return True
-    return signal.priority_score >= 55
+    return signal.priority_score >= THRESHOLDS.keep_priority_fallback
 
 
 def _apply_cluster_support(signals: list[PainSignal]) -> None:
@@ -632,7 +390,11 @@ def _apply_cluster_support(signals: list[PainSignal]) -> None:
         signal.source_diversity = source_diversity
         signal.priority_score = round(_clamp(signal.priority_score + support), 1)
 
-        if signal.evidence_grade == "D" and source_diversity >= 2 and (signal.buyer_markers or signal.pain_score >= 75):
+        if (
+            signal.evidence_grade == "D"
+            and source_diversity >= 2
+            and (signal.buyer_markers or signal.pain_score >= THRESHOLDS.cluster_grade_c_pain_min)
+        ):
             signal.evidence_grade = "C"
         elif signal.evidence_grade == "E" and source_diversity >= 2 and signal.pain_markers:
             signal.evidence_grade = "D"
@@ -644,8 +406,9 @@ def _build_validation_queues(signals: list[PainSignal]) -> list[dict[str, Any]]:
 
     grouped: dict[str, list[PainSignal]] = defaultdict(list)
     for signal in signals:
-        key = signal.tags[0] if signal.tags else _theme_key(signal.title)
-        grouped[key].append(signal)
+        keys = signal.tags or [_theme_key(signal.title)]
+        for key in dict.fromkeys(keys):
+            grouped[key].append(signal)
 
     queues: list[dict[str, Any]] = []
     for theme, items in grouped.items():
@@ -721,6 +484,8 @@ def _finalize_recommendation(signal: PainSignal) -> None:
     reasons: list[str] = []
     if signal.pain_markers:
         reasons.append(f"Pain language: {', '.join(signal.pain_markers[:5])}.")
+    if signal.request_markers and not signal.pain_markers:
+        reasons.append(f"Request language: {', '.join(signal.request_markers[:5])}.")
     if signal.buyer_markers:
         reasons.append(f"Buyer intent or money language: {', '.join(signal.buyer_markers[:5])}.")
     if signal.commercial_markers and not signal.buyer_markers:
@@ -737,13 +502,19 @@ def _finalize_recommendation(signal: PainSignal) -> None:
         reasons.append(f"Theme repeats across {signal.source_diversity} source types.")
 
     if signal.source_id == "producthunt_feed":
-        recommendation = "Map To Pain"
-    elif signal.evidence_grade in {"C", "D"} and signal.priority_score >= 72 and signal.founder_fit >= 60:
-        recommendation = "Validate Now"
-    elif signal.priority_score >= 60:
-        recommendation = "Research Next"
+        recommendation = MAP_TO_PAIN
+    elif signal.downrank_markers:
+        recommendation = WATCH
+    elif (
+        signal.evidence_grade in {"C", "D"}
+        and signal.priority_score >= THRESHOLDS.validate_now_priority_min
+        and signal.founder_fit >= THRESHOLDS.validate_now_fit_min
+    ):
+        recommendation = VALIDATE_NOW
+    elif signal.priority_score >= THRESHOLDS.research_next_priority_min:
+        recommendation = RESEARCH_NEXT
     else:
-        recommendation = "Watch"
+        recommendation = WATCH
 
     signal.recommendation = recommendation
     signal.reasons = reasons or ["Weak but potentially relevant source-language signal."]
@@ -799,9 +570,15 @@ def _downrank_markers(title: str, text: str) -> list[str]:
     story_hits = _phrase_hits(SUCCESS_STORY_PHRASES, text)
     if not story_hits:
         return []
-    if _phrase_hits(REQUEST_INTENT_PHRASES, title_text):
+    if _is_strong_request_title(title_text) and not _phrase_hits(STRONG_SUCCESS_STORY_PHRASES, title_text):
+        return []
+    if title_text.startswith("ask hn:") and _is_strong_request_title(title_text):
         return []
     return story_hits
+
+
+def _is_strong_request_title(title_text: str) -> bool:
+    return bool(_phrase_hits(REQUEST_INTENT_PHRASES, title_text))
 
 
 def _domain_tags(text: str) -> list[str]:
@@ -817,22 +594,24 @@ def _founder_fit(founder: FounderProfile, text: str, tags: list[str], source_id:
     profile_terms = founder.strengths + founder.exploration_interests
     channel_terms = founder.channels
     hard_hits = _phrase_hits(founder.hard_exclusions, text)
+    preferred_channel_hits = _phrase_hits(founder.preferred_channels, f"{source_id} {source}".lower())
+    negative_hits = _phrase_hits(founder.negative_keywords, text)
+    soft_negative_hits = _phrase_hits(founder.soft_negative_keywords, text)
 
     score += min(len(_phrase_hits(profile_terms, text)) * 8, 32)
     score += min(len(_phrase_hits(channel_terms, f"{text} {source}")) * 4, 12)
+    score += min(len(preferred_channel_hits) * founder.channel_weight, founder.channel_weight * 2)
     score += min(len(tags) * 5, 20)
 
     if source_id == "hackernews_topstories":
         score += 8
-    if source.startswith("reddit/r/") and any(item in source.lower() for item in ["saas", "sideproject", "webdev"]):
-        score += 7
     if source_id == "producthunt_feed":
         score += 4
 
-    if any(term in text for term in ["hardware", "clinical", "medical device", "manufacturing"]):
-        score -= 12
-    if any(term in text for term in ["enterprise procurement", "government", "regulated"]):
-        score -= 8
+    if negative_hits:
+        score -= min(len(negative_hits) * founder.negative_weight, founder.negative_weight * 2)
+    if soft_negative_hits:
+        score -= min(len(soft_negative_hits) * founder.soft_negative_weight, founder.soft_negative_weight * 2)
     if hard_hits:
         score = min(score, 10)
     return _clamp(score)
@@ -882,6 +661,7 @@ def _evidence_grade(
     *,
     source_id: str,
     pain_markers: list[str],
+    request_markers: list[str],
     buyer_markers: list[str],
     commercial_markers: list[str],
     downrank_markers: list[str],
@@ -896,11 +676,13 @@ def _evidence_grade(
         if pain_markers and (buyer_markers or workaround_markers or urgency_markers):
             return "D"
         return "E"
-    if pain_markers and buyer_markers and pain_score >= 65:
+    if pain_markers and buyer_markers and pain_score >= THRESHOLDS.grade_c_pain_min:
         return "C"
     if pain_markers and (workaround_markers or urgency_markers or engagement_score >= 8):
         return "D"
-    if pain_markers and commercial_markers and pain_score >= 60:
+    if pain_markers and commercial_markers and pain_score >= THRESHOLDS.grade_d_commercial_pain_min:
+        return "D"
+    if request_markers and (buyer_markers or workaround_markers or urgency_markers):
         return "D"
     if buyer_markers and workaround_markers:
         return "D"
@@ -918,6 +700,7 @@ def _marker_line(signal: dict[str, Any]) -> str:
     groups = []
     for label, key in [
         ("pain", "pain_markers"),
+        ("request", "request_markers"),
         ("buyer", "buyer_markers"),
         ("commercial", "commercial_markers"),
         ("workaround", "workaround_markers"),

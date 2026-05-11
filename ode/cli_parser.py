@@ -104,7 +104,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--profile-json", help="Inline founder profile JSON")
     p.add_argument(
         "--min-grade",
-        choices=["A", "B", "C", "D", "E"],
+        choices=["C", "D", "E"],
         default="E",
         help="Minimum evidence grade to include",
     )
@@ -113,6 +113,55 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--product-hunt", dest="product_hunt", action="store_true", default=True)
     p.add_argument("--no-product-hunt", dest="product_hunt", action="store_false")
     p.add_argument("--output", help="Save report to file")
+
+    p = sub.add_parser("daily", help="Run daily review and update opportunity warnings")
+    p.add_argument("--hn-top", type=int, default=50, help="HackerNews top N")
+    p.add_argument("--reddit", help="Reddit subreddits (comma-separated)")
+    p.add_argument("--reddit-limit", type=int, default=15, help="Posts per subreddit")
+    p.add_argument("--keywords", help="Profile/seed keywords (comma-separated)")
+    p.add_argument("--profile", help="Path to founder profile JSON")
+    p.add_argument("--profile-json", help="Inline founder profile JSON")
+    p.add_argument(
+        "--min-grade",
+        choices=["C", "D", "E"],
+        default="E",
+        help="Minimum pain evidence grade to include",
+    )
+    p.add_argument("--limit", type=int, default=20, help="Number of ranked pain signals")
+    p.add_argument("--product-hunt-limit", type=int, default=30, help="Product Hunt feed items")
+    p.add_argument("--product-hunt", dest="product_hunt", action="store_true", default=True)
+    p.add_argument("--no-product-hunt", dest="product_hunt", action="store_false")
+    p.add_argument("--cases-path", help="Revenue case JSON file")
+    p.add_argument("--cases-region", choices=["global", "china"], help="Filter revenue cases by region")
+    p.add_argument(
+        "--cases-min-grade",
+        choices=["A", "B", "C", "D", "E"],
+        default="B",
+        help="Minimum revenue evidence grade to include",
+    )
+    p.add_argument("--cases-top", type=int, default=10, help="Limit number of revenue cases; 0 skips cases")
+    p.add_argument("--explore", dest="explore", action="store_true", default=True)
+    p.add_argument("--no-explore", dest="explore", action="store_false")
+    p.add_argument("--date", help=argparse.SUPPRESS)
+
+    p = sub.add_parser("init-alerts", help="Bootstrap warning priors from revenue cases")
+    p.add_argument("--path", "--cases-path", dest="cases_path", help="Revenue case JSON file")
+    p.add_argument(
+        "--region",
+        choices=["global", "china"],
+        help="Filter cases by region",
+    )
+    p.add_argument(
+        "--min-grade",
+        choices=["A", "B", "C", "D", "E"],
+        default="C",
+        help="Minimum revenue evidence grade to learn from",
+    )
+    p.add_argument("--top", type=int, help="Limit number of cases")
+    p.add_argument("--profile", help="Path to founder profile JSON")
+    p.add_argument("--profile-json", help="Inline founder profile JSON")
+    p.add_argument("--reset", action="store_true", help="Reset existing warning state before seeding")
+    p.add_argument("--date", help=argparse.SUPPRESS)
 
     p = sub.add_parser("insights", help="Generate insights for an opportunity")
     p.add_argument("opp_id", help="Opportunity ID or name")

@@ -9,14 +9,14 @@ ODE 的机会发现分两层：
 
 ## Current Runtime Sources
 
-| Source ID | Status | Trigger | What It Captures | Main Bias |
-|-----------|--------|---------|------------------|-----------|
-| `hackernews_topstories` | active | `--hn-top > 0` | HN top stories through Firebase API | technical early adopters |
-| `reddit_hot_rss` | active | `--reddit "sub1,sub2"` | subreddit hot RSS posts | noisy community language |
-| `producthunt_feed` | active | `ode pain` with Product Hunt enabled | recent Product Hunt launches from the public Atom feed | solution-side launch bias |
-| `google_trends` | optional | `--keywords` plus optional `pytrends` dependency | search interest and rising queries | seed-keyword dependent |
+| Source ID | Status | Contexts | Trigger | What It Captures | Main Bias |
+|-----------|--------|----------|---------|------------------|-----------|
+| `hackernews_topstories` | active | `scan_worker`, `explore`, `pain_listener` | `--hn-top > 0` | HN top stories through Firebase API | technical early adopters |
+| `reddit_hot_rss` | active | `scan_worker`, `explore`, `pain_listener` | `--reddit "sub1,sub2"` | subreddit hot RSS posts | noisy community language |
+| `producthunt_feed` | active | `pain_listener` | `ode pain` with Product Hunt enabled | recent Product Hunt launches from the public Atom feed | solution-side launch bias |
+| `google_trends` | optional | `scan_worker`, `explore` | `--keywords` plus optional `pytrends` dependency | search interest and rising queries | seed-keyword dependent |
 
-`ode scan` and `ode explore` call HN, Reddit, and optional Trends. `ode pain` calls HN, Reddit, and Product Hunt, then grades signals before ranking founder fit and grouping candidates into validation queues.
+`ode scan` and `ode explore` call HN, Reddit, and optional Trends. `ode pain` calls HN, Reddit, and Product Hunt, then grades signals before ranking founder fit and grouping candidates into validation queues. Runtime dispatch goes through `ode.tools.source_dispatch`, which loads the adapter declared in this registry for the requested context. Source adapters live under `ode.tools.sources`; `ode.tools.trend_scanner` keeps compatibility wrappers and aggregate report/filter behavior.
 
 ## Utility And Manual Sources
 
@@ -48,7 +48,7 @@ Mainstream platforms are covered first as a registry map, then promoted to activ
 | China content/social | `cn_douyin_video_search_api`, `cn_kuaishou_open_platform`, `cn_bilibili_ranking`, `cn_weibo_hot_search`, `cn_zhihu_hot`, `cn_xiaohongshu_manual`, `cn_wechat_channels_assistant_manual` | planned/manual |
 | China ecommerce/local | `cn_taobao_open_platform`, `cn_jd_open_platform`, `cn_pdd_open_platform`, `cn_1688_open_platform`, `cn_douyin_ecommerce_open_api`, `cn_kuaishou_ecommerce_open_api`, `cn_meituan_open_platform`, `cn_ele_me_open_platform`, `cn_wechat_store_api`, `cn_xiaohongshu_ark_order_api` | planned |
 
-Coverage rule: a mainstream source can exist in the catalog even when it is not automated. The registry is the truth about coverage; `used_by_scan_workers` is the truth about what currently runs.
+Coverage rule: a mainstream source can exist in the catalog even when it is not automated. The registry is the truth about coverage; `contexts` is the truth about which entrypoints can call a source, and `used_by_scan_workers` specifically means the `scan_worker` context.
 
 ## China-Focused Sources
 
@@ -150,7 +150,7 @@ Listen for pain signals and solution-side Product Hunt proxies:
 python -m ode pain --reddit "SaaS,SideProject,microsaas,webdev" --hn-top 50 --min-grade D
 ```
 
-`ode pain` treats Product Hunt as a solution-side source: even explicit launch-copy pain is capped below primary community evidence until a Reddit/HN/user quote confirms the painful job. It also downranks launch and success-story posts so revenue claims stay in the separate `ode cases` workflow.
+`ode pain` exposes reachable community evidence grades only: C, D, and E. Product Hunt is treated as a solution-side source: even explicit launch-copy pain is capped below primary community evidence until a Reddit/HN/user quote confirms the painful job. Launch and success-story posts are downranked so revenue claims stay in the separate `ode cases` workflow.
 
 ## Signal Audit Fields
 

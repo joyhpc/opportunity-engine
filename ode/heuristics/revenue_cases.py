@@ -14,6 +14,8 @@ DEFAULT_CASES_PATH = Path(__file__).resolve().parents[2] / "examples" / "revenue
 
 GRADE_STRENGTH = {"A": 5, "B": 4, "C": 3, "D": 2, "E": 1}
 GRADE_BASE_CONFIDENCE = {"A": 92, "B": 78, "C": 62, "D": 40, "E": 18}
+ENTRY_SWEET_SPOT_GRADES = {"B", "C"}
+QUIET_MONEY_EVIDENCE_TYPES = {"signed_contract", "payment_receipt"}
 EVIDENCE_TYPE_GRADES = {
     "audited_financial": "A",
     "public_filing": "A",
@@ -135,6 +137,9 @@ class RevenueCaseAnalysis:
     evidence_grade: str
     confidence: float
     founder_fit: float
+    entry_fit: float
+    quiet_money_score: float
+    case_role: str
     suitability: str
     revenue_quality: str
     red_flags: list[str]
@@ -171,11 +176,23 @@ def analyze_revenue_case(
     evidence_grade, red_flags = grade_revenue_evidence(revenue_case)
     confidence = _confidence(revenue_case, evidence_grade, red_flags)
     founder_fit = _founder_fit(revenue_case, founder)
+    entry_fit = _entry_fit(revenue_case, founder, evidence_grade)
     revenue_quality = _revenue_quality(revenue_case)
+    quiet_money_score = _quiet_money_score(revenue_case, evidence_grade, revenue_quality, red_flags)
     protected = confidence >= 58 and founder_fit < 45 and revenue_quality != "not_revenue"
+    case_role = _case_role(
+        evidence_grade=evidence_grade,
+        confidence=confidence,
+        founder_fit=founder_fit,
+        entry_fit=entry_fit,
+        quiet_money_score=quiet_money_score,
+        revenue_quality=revenue_quality,
+    )
     suitability = _suitability(
         confidence=confidence,
         founder_fit=founder_fit,
+        entry_fit=entry_fit,
+        quiet_money_score=quiet_money_score,
         evidence_grade=evidence_grade,
         revenue_quality=revenue_quality,
         protected_as_watchlist=protected,
@@ -186,11 +203,14 @@ def analyze_revenue_case(
         evidence_grade=evidence_grade,
         confidence=round(confidence, 1),
         founder_fit=round(founder_fit, 1),
+        entry_fit=round(entry_fit, 1),
+        quiet_money_score=round(quiet_money_score, 1),
+        case_role=case_role,
         suitability=suitability,
         revenue_quality=revenue_quality,
         red_flags=red_flags,
         verification_steps=_verification_steps(revenue_case, evidence_grade, revenue_quality, red_flags),
-        next_actions=_next_actions(suitability, evidence_grade, revenue_quality),
+        next_actions=_next_actions(suitability, evidence_grade, revenue_quality, case_role),
         protected_as_watchlist=protected,
     )
 
@@ -217,10 +237,21 @@ def analyze_revenue_cases(
             if GRADE_STRENGTH[item.evidence_grade] >= threshold
         ]
 
+    suitability_rank = {
+        "Prime Case": 0,
+        "Quiet Candidate": 1,
+        "Candidate": 2,
+        "Market Map": 3,
+        "Watchlist": 4,
+        "Verify First": 5,
+        "Reject For Now": 6,
+    }
     analyses.sort(key=lambda item: (
-        item.suitability != "Prime Case",
-        -item.confidence,
+        suitability_rank.get(item.suitability, 9),
+        -item.quiet_money_score,
+        -item.entry_fit,
         -item.founder_fit,
+        -item.confidence,
         item.case.name,
     ))
     return analyses[:top] if top else analyses
@@ -274,14 +305,16 @@ def format_revenue_case_report(analyses: list[RevenueCaseAnalysis]) -> str:
     lines = [
         "# Revenue Case Analysis",
         "",
-        "| Rank | Case | Region | Grade | Confidence | Fit | Suitability |",
-        "|------|------|--------|-------|------------|-----|-------------|",
+        "| Rank | Case | Region | Grade | Confidence | Founder Fit | Entry Fit | Quiet Money | Role | Suitability |",
+        "|------|------|--------|-------|------------|-------------|-----------|-------------|------|-------------|",
     ]
     for index, item in enumerate(analyses, 1):
         case = item.case
         lines.append(
             f"| {index} | {case.name} | {case.region} | {item.evidence_grade} | "
-            f"{item.confidence:.1f} | {item.founder_fit:.1f} | {item.suitability} |"
+            f"{item.confidence:.1f} | {item.founder_fit:.1f} | {item.entry_fit:.1f} | "
+            f"{item.quiet_money_score:.1f} | "
+            f"{item.case_role} | {item.suitability} |"
         )
 
     for item in analyses:
@@ -293,6 +326,9 @@ def format_revenue_case_report(analyses: list[RevenueCaseAnalysis]) -> str:
             f"Metric: {case.metric_type} {case.amount or ''} {case.currency} {case.period}".strip(),
             f"Revenue quality: {item.revenue_quality}",
             f"Evidence grade: {item.evidence_grade}",
+            f"Entry fit: {item.entry_fit:.1f}",
+            f"Quiet money score: {item.quiet_money_score:.1f}",
+            f"Role: {item.case_role}",
             f"Suitability: {item.suitability}",
         ])
         if item.red_flags:
@@ -363,6 +399,181 @@ def _founder_fit(case: RevenueCase, founder: FounderProfile) -> float:
     return _clamp(score)
 
 
+def _entry_fit(case: RevenueCase, founder: FounderProfile, evidence_grade: str) -> float:
+    """Estimate whether this is directly enterable by the current builder.
+
+    Evidence strength proves the market. Entry fit asks whether the current
+    founder can find a small wedge without copying an incumbent's capital,
+    channels, inventory, or procurement path.
+    """
+
+    text = " ".join([
+        case.name,
+        case.category,
+        case.claim,
+        case.notes,
+        " ".join(case.fit_tags),
+        " ".join(case.risk_flags),
+    ]).lower()
+
+    score = 42.0
+    if evidence_grade in ENTRY_SWEET_SPOT_GRADES:
+        score += 12
+    elif evidence_grade == "A":
+        score -= 8
+    elif evidence_grade in {"D", "E"}:
+        score -= 10
+
+    if case.metric_type in {"arr", "mrr", "subscription_revenue", "paid_subscribers"}:
+        score += 8
+    if case.metric_type in {"contract_value", "order_revenue"}:
+        score += 4
+
+    wedge_terms = {
+        "software",
+        "workflow",
+        "automation",
+        "api",
+        "developer",
+        "vertical saas",
+        "subscription",
+        "knowledge",
+        "analytics",
+        "tool",
+        "platform",
+        "data",
+    }
+    if any(term in text for term in wedge_terms):
+        score += 14
+    if "hardware" in text and not any(term in text for term in {"software", "workflow", "data", "api"}):
+        score -= 10
+    if any(term in text for term in {"robot", "robotics", "lidar", "chip", "server", "glasses"}):
+        score -= 5
+
+    penalties = {
+        "heavy_capital": 26,
+        "requires_inventory": 18,
+        "enterprise_procurement": 14,
+        "regulated": 14,
+        "platform_dependency": 7,
+        "low_margin": 8,
+    }
+    for flag, penalty in penalties.items():
+        if flag in case.risk_flags:
+            score -= penalty
+
+    if founder.capital_budget_usd <= 5000 and any(flag in case.risk_flags for flag in {"heavy_capital", "requires_inventory"}):
+        score -= 10
+    if founder.validation_window_days <= 30 and "enterprise_procurement" in case.risk_flags:
+        score -= 8
+    if case.amount and case.amount >= 100_000_000 and evidence_grade == "A":
+        score -= 8
+
+    return _clamp(score)
+
+
+def _quiet_money_score(
+    case: RevenueCase,
+    evidence_grade: str,
+    revenue_quality: str,
+    red_flags: list[str],
+) -> float:
+    """Detect low-publicity money signals without lowering proof standards."""
+
+    evidence_types = {item.type for item in case.evidence}
+    source_names = {item.source_name for item in case.evidence if item.source_name}
+    text = " ".join([
+        case.name,
+        case.category,
+        case.claim,
+        case.notes,
+        " ".join(case.fit_tags),
+        " ".join(case.risk_flags),
+        " ".join(item.notes for item in case.evidence),
+    ]).lower()
+
+    score = 28.0
+    if revenue_quality == "direct_revenue":
+        score += 10
+    elif revenue_quality == "revenue_adjacent":
+        score += 2
+    else:
+        score -= 25
+
+    if evidence_types & QUIET_MONEY_EVIDENCE_TYPES:
+        score += 22
+    if "company_formal_disclosure" in evidence_types:
+        score += 8
+    if "company_pr" in evidence_types and not (evidence_types & QUIET_MONEY_EVIDENCE_TYPES):
+        score -= 12
+    if evidence_types <= {"social_screenshot", "rumor"}:
+        score -= 18
+
+    if evidence_grade in ENTRY_SWEET_SPOT_GRADES:
+        score += 8
+    elif evidence_grade == "A":
+        score -= 8
+    elif evidence_grade in {"D", "E"}:
+        score -= 6
+
+    if case.metric_type in {"contract_value", "order_revenue", "subscription_revenue", "net_revenue"}:
+        score += 14
+    elif case.metric_type in {"arr", "mrr", "revenue"}:
+        score += 5
+    elif case.metric_type == "paid_subscribers":
+        score += 2
+
+    if case.amount is None:
+        score -= 4
+    elif 1_000 <= case.amount <= 5_000_000:
+        score += 12
+    elif case.amount <= 50_000_000:
+        score += 8
+    elif case.amount >= 100_000_000:
+        score -= 10
+
+    if len(source_names) >= 2 or len(case.source_ids) >= 2:
+        score += 5
+
+    operational_terms = {
+        "contract",
+        "invoice",
+        "order",
+        "booking",
+        "procurement",
+        "tender",
+        "dealer",
+        "integrator",
+        "maintenance",
+        "rental",
+        "ops",
+        "operation",
+        "vertical",
+        "niche",
+        "workflow",
+        "renewal",
+        "repeat",
+    }
+    score += min(sum(1 for term in operational_terms if term in text) * 4, 20)
+
+    noisy_terms = {"funding", "valuation", "press", "viral", "downloads", "traffic"}
+    score -= min(sum(1 for term in noisy_terms if term in text) * 4, 16)
+
+    if "platform_dependency" in case.risk_flags:
+        score -= 4
+    if "heavy_capital" in case.risk_flags:
+        score -= 5
+    if "requires_inventory" in case.risk_flags:
+        score -= 4
+    if "enterprise_procurement" in case.risk_flags:
+        score += 2
+
+    if red_flags:
+        score -= min(len(red_flags) * 2, 8)
+
+    return _clamp(score)
+
+
 def _revenue_quality(case: RevenueCase) -> str:
     if case.metric_type in REVENUE_METRICS:
         return "direct_revenue"
@@ -377,15 +588,26 @@ def _suitability(
     *,
     confidence: float,
     founder_fit: float,
+    entry_fit: float,
+    quiet_money_score: float,
     evidence_grade: str,
     revenue_quality: str,
     protected_as_watchlist: bool,
 ) -> str:
     if revenue_quality == "not_revenue" and confidence < 55:
         return "Reject For Now"
-    if confidence >= 76 and founder_fit >= 60 and evidence_grade in {"A", "B"}:
+    if evidence_grade == "A" and entry_fit < 62:
+        return "Market Map"
+    if (
+        confidence >= 76
+        and founder_fit >= 60
+        and entry_fit >= 58
+        and evidence_grade in ENTRY_SWEET_SPOT_GRADES
+    ):
         return "Prime Case"
-    if confidence >= 62 and founder_fit >= 48:
+    if quiet_money_score >= 68 and entry_fit >= 45 and confidence >= 42 and revenue_quality != "not_revenue":
+        return "Quiet Candidate"
+    if confidence >= 62 and founder_fit >= 48 and entry_fit >= 42:
         return "Candidate"
     if protected_as_watchlist:
         return "Watchlist"
@@ -411,12 +633,28 @@ def _verification_steps(
         steps.append("Use government material only as policy/procurement context; verify buyer payment separately.")
     if case.region == "china":
         steps.append("Cross-check Chinese claims with filings, platform merchant data, contracts, or independent customer proof.")
+    if grade == "A":
+        steps.append("Treat A-grade cases as market maps first; search for B/C-grade wedges around the incumbent instead of copying the core business.")
+    if case.evidence and any(item.type in QUIET_MONEY_EVIDENCE_TYPES for item in case.evidence):
+        steps.append("For quiet-money cases, verify repeatability: second customer, renewal, refill order, or paid operator referral.")
     steps.append("Identify the repeatable pattern: buyer, painful job, channel, pricing, and why now.")
     steps.append("Look for at least one disconfirming source before moving to build validation.")
     return steps
 
 
-def _next_actions(suitability: str, grade: str, revenue_quality: str) -> list[str]:
+def _next_actions(suitability: str, grade: str, revenue_quality: str, case_role: str) -> list[str]:
+    if suitability == "Market Map" or case_role == "market_map":
+        return [
+            "Use this case to confirm the budget pool and buyer vocabulary.",
+            "Look for under-served workflows, services, or tooling around the proven incumbent.",
+            "Do not model the first validation sprint on the incumbent's capital or channel requirements.",
+        ]
+    if suitability == "Quiet Candidate" or case_role == "quiet_money":
+        return [
+            "Validate the hidden demand before expanding the source search.",
+            "Find 5 operators or buyers in the same narrow workflow.",
+            "Ask for proof of repeat purchase, renewal, inventory turn, or paid implementation.",
+        ]
     if suitability == "Prime Case":
         return [
             "Extract the wedge and map it to a narrow validation sprint.",
@@ -445,6 +683,30 @@ def _next_actions(suitability: str, grade: str, revenue_quality: str) -> list[st
         "Do not use this as a model case yet.",
         "Keep only as weak market context unless new revenue proof appears.",
     ]
+
+
+def _case_role(
+    *,
+    evidence_grade: str,
+    confidence: float,
+    founder_fit: float,
+    entry_fit: float,
+    quiet_money_score: float,
+    revenue_quality: str,
+) -> str:
+    if revenue_quality == "not_revenue":
+        return "context_only"
+    if evidence_grade == "A" and entry_fit < 62:
+        return "market_map"
+    if evidence_grade in ENTRY_SWEET_SPOT_GRADES and entry_fit >= 58 and founder_fit >= 50:
+        return "buildable_wedge"
+    if quiet_money_score >= 68 and entry_fit >= 45:
+        return "quiet_money"
+    if confidence >= 55 and entry_fit >= 40:
+        return "validation_candidate"
+    if confidence >= 42:
+        return "watchlist"
+    return "weak_signal"
 
 
 def _stronger_grade(current: str, candidate: str) -> str:

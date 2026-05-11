@@ -159,12 +159,130 @@ class TestServicePainListener:
             },
         ]
 
-        with patch("ode.heuristics.pain_listener.fetch_pain_sources", return_value=fake_signals):
+        with patch("ode.service._fetch_pain_source_result", return_value={
+            "signals": fake_signals,
+            "source_events": [{"source_id": "test", "status": "ok", "count": len(fake_signals)}],
+        }):
             result = asyncio.run(listen_pains(hn_top=1, min_grade="E"))
 
         assert result["ok"] is True
         assert result["data"]["result"]["kept_signals"] >= 1
+        assert result["data"]["result"]["source_events"][0]["source_id"] == "test"
         assert "Pain Listener Report" in result["data"]["formatted"]
+
+    def test_listen_pains_rejects_unreachable_grade(self):
+        from ode.service import listen_pains
+
+        result = asyncio.run(listen_pains(hn_top=0, min_grade="A"))
+
+        assert result["ok"] is False
+        assert "Unsupported pain evidence grade" in result["message"]
+
+
+class TestServiceDailyReview:
+    def test_daily_review_updates_watchlist_and_report(self):
+        from ode.service import run_daily_review
+        from unittest.mock import AsyncMock, patch
+
+        fake_pain = {
+            "ok": True,
+            "data": {
+                "result": {
+                    "all_signals": [
+                        {
+                            "title": "Looking for an AI tool to stop invoice reconciliation work",
+                            "source_id": "reddit_hot_rss",
+                            "source": "reddit/r/SaaS",
+                            "tags": ["invoice"],
+                            "evidence_grade": "C",
+                            "priority_score": 78,
+                            "founder_fit": 70,
+                            "url": "https://example.com/pain",
+                        }
+                    ],
+                    "source_events": [
+                        {"source_id": "reddit_hot_rss", "status": "ok", "count": 1}
+                    ],
+                }
+            },
+            "message": "",
+        }
+        fake_cases = {
+            "ok": True,
+            "data": {"cases": [], "formatted": "", "count": 0},
+            "message": "",
+        }
+        fake_explore = {
+            "ok": True,
+            "data": {"result": {"status": "ok", "hypotheses": []}},
+            "message": "",
+        }
+        fake_portfolio = {
+            "ok": True,
+            "data": {"summaries": []},
+            "message": "",
+        }
+
+        with patch("ode.service.listen_pains", new=AsyncMock(return_value=fake_pain)), \
+             patch("ode.service.analyze_revenue_cases", new=AsyncMock(return_value=fake_cases)), \
+             patch("ode.service.explore_signals", new=AsyncMock(return_value=fake_explore)), \
+             patch("ode.service.get_portfolio", new=AsyncMock(return_value=fake_portfolio)):
+            result = asyncio.run(run_daily_review(run_date="2026-05-11"))
+
+        assert result["ok"] is True
+        assert result["data"]["alerts"][0]["status"] == "Validate Soon"
+        assert result["data"]["source_events"][0]["source_id"] == "reddit_hot_rss"
+        assert "Daily Opportunity Warning Report" in result["data"]["report_text"]
+        assert os.path.exists(result["data"]["state_path"])
+        assert os.path.exists(result["data"]["report_path"])
+
+
+class TestServiceInitializeWarnings:
+    def test_initialize_warning_system_writes_priors_and_report(self):
+        from ode.service import initialize_warning_system
+        from unittest.mock import AsyncMock, patch
+
+        fake_cases = {
+            "ok": True,
+            "data": {
+                "cases": [
+                    {
+                        "case": {
+                            "id": "invoice-contract",
+                            "name": "Invoice Ops Paid Pilot",
+                            "category": "vertical SaaS",
+                            "claim": "A team signed a paid pilot for invoice workflow automation.",
+                            "source_ids": ["customer_contract"],
+                            "evidence": [{"type": "signed_contract", "source_name": "Customer contract"}],
+                            "fit_tags": ["invoice", "automation"],
+                        },
+                        "evidence_grade": "B",
+                        "confidence": 78,
+                        "founder_fit": 72,
+                        "entry_fit": 76,
+                        "quiet_money_score": 80,
+                        "suitability": "Prime Case",
+                        "case_role": "quiet_money",
+                        "next_actions": ["Verify the buyer segment."],
+                    }
+                ],
+                "formatted": "",
+                "count": 1,
+            },
+            "message": "",
+        }
+
+        with patch("ode.service.analyze_revenue_cases", new=AsyncMock(return_value=fake_cases)):
+            result = asyncio.run(initialize_warning_system(run_date="2026-05-11", reset=True))
+
+        assert result["ok"] is True
+        assert result["data"]["case_count"] == 1
+        assert result["data"]["priors"]
+        assert result["data"]["alerts"][0]["status"] == "Validate Soon"
+        assert "Initial Opportunity Warning System" in result["data"]["report_text"]
+        assert os.path.exists(result["data"]["state_path"])
+        assert os.path.exists(result["data"]["priors_path"])
+        assert os.path.exists(result["data"]["report_path"])
 
 
 class TestServiceInsights:

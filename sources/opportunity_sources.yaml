@@ -4,7 +4,11 @@ sources:
     label: Hacker News Top Stories
     status: active
     layer: trend_signal
-    adapter: ode.tools.trend_scanner.scan_hackernews
+    adapter: ode.tools.sources.hackernews.scan
+    contexts:
+      - scan_worker
+      - explore
+      - pain_listener
     endpoint: "https://hacker-news.firebaseio.com/v0/topstories.json"
     auth: none
     default_enabled: false
@@ -27,7 +31,11 @@ sources:
     label: Reddit Hot RSS
     status: active
     layer: community_signal
-    adapter: ode.tools.trend_scanner.scan_reddit
+    adapter: ode.tools.sources.reddit.scan
+    contexts:
+      - scan_worker
+      - explore
+      - pain_listener
     endpoint: "https://www.reddit.com/r/{subreddit}/hot/.rss"
     auth: none
     default_enabled: false
@@ -51,7 +59,9 @@ sources:
     label: Product Hunt Public Feed
     status: active
     layer: launch_signal
-    adapter: ode.tools.trend_scanner.scan_producthunt
+    adapter: ode.tools.sources.producthunt.scan
+    contexts:
+      - pain_listener
     endpoint: "https://www.producthunt.com/feed"
     auth: none
     default_enabled: false
@@ -76,7 +86,10 @@ sources:
     label: Google Trends
     status: optional
     layer: search_interest
-    adapter: ode.tools.trend_scanner.scan_google_trends
+    adapter: ode.tools.sources.google_trends.scan
+    contexts:
+      - scan_worker
+      - explore
     endpoint: pytrends unofficial Google Trends client
     auth: none
     default_enabled: true

@@ -64,6 +64,7 @@ python -m ode status
 python -m ode sources --region china
 python -m ode sources --region global
 python -m ode cases --region china --min-grade B
+python -m ode pain --reddit "SaaS,SideProject,microsaas,webdev" --hn-top 50 --min-grade D
 python -m ode explore
 
 # B. 我已经有一个方向：创建机会，扫描，评估，生成报告
@@ -79,6 +80,7 @@ python -m ode report <opp_id> --stage screen --print
 
 ```bash
 python -m ode cases --region china --min-grade B --top 10
+python -m ode pain --reddit "SaaS,SideProject,microsaas,webdev" --hn-top 50 --min-grade D
 python -m ode explore --hn-top 50 --reddit "startup,SaaS,Entrepreneur,sideproject"
 ```
 
@@ -113,7 +115,10 @@ python3 -m ode lens <opp_id> --profile examples/profiles/open_founder_profile.js
 # 8. 赚钱案例：先看谁已经赚到钱，再验真和筛选
 python3 -m ode cases --region china --min-grade B
 
-# 9. 组合视图
+# 9. 痛点监听：扫描社区痛点，Product Hunt 只作 solution-side proxy
+python3 -m ode pain --reddit "SaaS,SideProject,microsaas,webdev" --hn-top 50 --min-grade D
+
+# 10. 组合视图
 python3 -m ode portfolio
 ```
 
@@ -124,6 +129,7 @@ python3 -m ode portfolio
 | Command | Description | Example |
 |---------|-------------|---------|
 | `explore` | 开放式机会发现（无需想法） | `ode explore --hn-top 50` |
+| `pain` | 监听社区痛点并生成 validation queues | `ode pain --reddit "SaaS" --min-grade D` |
 | `create` | 创建新机会 | `ode create --name "X" --domain "Y"` |
 | `list` | 列出所有机会 | `ode list` |
 | `show` | 查看机会详情 | `ode show <id>` |
@@ -134,6 +140,7 @@ python3 -m ode portfolio
 | `lens` | Founder Fit Lens 软排序 | `ode lens <id> --profile examples/profiles/open_founder_profile.json` |
 | `sources` | 查看机会发现数据源注册表 | `ode sources --region china` |
 | `cases` | 分析赚钱案例、证据等级和适配度 | `ode cases --region china --min-grade B` |
+| `init-alerts` | 从案例库学习初始预警先验并初始化 watchlist | `ode init-alerts --min-grade C --reset` |
 | `portfolio` | 组合对比视图 | `ode portfolio` |
 | `compare` | 并排对比机会 | `ode compare "id1,id2"` |
 | `status` | ODE 系统状态 | `ode status` |
@@ -177,7 +184,7 @@ python3 -m ode portfolio
 | `prototypes/` | 原型实验区，不被运行时代码直接依赖 |
 
 详细层级和整理规则见 [docs/03-project-structure.md](docs/03-project-structure.md)。
-数据源注册表和扫描边界见 [docs/04-data-sources.md](docs/04-data-sources.md)，包括中国国内源。赚钱案例的精筛和验真流程见 [docs/05-revenue-cases.md](docs/05-revenue-cases.md)。
+数据源注册表和扫描边界见 [docs/04-data-sources.md](docs/04-data-sources.md)，包括中国国内源和每个 runtime source 的 `contexts`。赚钱案例的精筛和验真流程见 [docs/05-revenue-cases.md](docs/05-revenue-cases.md)。
 
 机会筛选采用 “开放发现 + 延迟判断”：
 
@@ -228,6 +235,7 @@ ODE 的核心差异化：不仅评估，还启发。
 | Module | Purpose | Entry Point |
 |--------|---------|-------------|
 | **explore** | "我不知道做什么" → 扫描+聚类+假设生成 | `ode explore` |
+| **pain_listener** | 社区痛点 + solution-side proxy → 证据评级和验证队列 | `ode pain` |
 | **bridge** | 信号 → 评分自动推断（18项免手动） | `ode eval`（无 --scores 时自动触发） |
 | **reframe** | MAYBE/KILL → 具体转型策略 | `ode insights <id>` |
 | **synthesize** | 交叉数据矛盾检测 + 盲区发现 | `ode insights <id>` / report 自动附加 |
@@ -252,20 +260,21 @@ ODE 的核心差异化：不仅评估，还启发。
 ## Test Suite
 
 ```bash
-python3 -m pytest tests/ -v    # 126 tests
+python3 -m pytest tests/ -v    # 152 tests
 ```
 
 | Test File | Tests | Coverage |
 |-----------|-------|----------|
-| `tests/test_cli_surface.py` | 4 | CLI 入口拆分、parser 命令集合、JSON/text 模式 |
+| `tests/test_cli_surface.py` | 7 | CLI 入口拆分、parser 命令集合、JSON/text 模式、pain grade/profile 错误 |
 | `tests/test_eldermind.py` | 33 | 核心模块：models, store, scorer, financials, gate, pipeline, cache, CLI |
 | `tests/test_fit_lens.py` | 4 | Founder Fit Lens 分类、异类机会保护、service 接入 |
-| `tests/test_heuristics.py` | 25 | 启发模块：explore, bridge, reframe, synthesize |
+| `tests/test_heuristics.py` | 51 | 启发模块：explore, bridge, reframe, synthesize |
 | `tests/test_import_integration.py` | 2 | 外部导入素材到 ODE 七阶段计划的契约 |
+| `tests/test_pain_listener.py` | 12 | 痛点监听、证据评级、success-story 降权、profile 适配、validation queues |
 | `tests/test_project_structure.py` | 3 | 仓库层级边界、运行产物追踪检查 |
 | `tests/test_revenue_cases.py` | 4 | 赚钱案例证据评级、筛选、service 接入、自定义案例文件 |
-| `tests/test_service.py` | 43 | service layer、实验记录、实际财务数据、gate refresh |
-| `tests/test_source_registry.py` | 8 | 数据源注册表、地区过滤、runtime source ids、主流/受限平台源、scanner source_id |
+| `tests/test_service.py` | 19 | service layer、实验记录、实际财务数据、gate refresh、pain listener |
+| `tests/test_source_registry.py` | 17 | 数据源注册表、地区过滤、runtime contexts、adapter dispatch、scanner source_id、源失败记录 |
 
 ---
 

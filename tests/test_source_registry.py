@@ -12,17 +12,23 @@ def test_source_catalog_loads_active_and_planned_sources():
     assert by_id["producthunt_feed"].status == "active"
     assert by_id["google_trends"].status == "optional"
     assert by_id["arxiv_recent"].status == "planned"
+    assert by_id["producthunt_feed"].contexts == ["pain_listener"]
 
 
 def test_runtime_source_ids_only_include_scanner_sources():
-    from ode.tools.source_registry import runtime_source_ids
+    from ode.tools.source_registry import runtime_source_ids, sources_for_context
 
     assert runtime_source_ids() == {
         "google_trends",
         "hackernews_topstories",
+        "reddit_hot_rss",
+    }
+    assert {source.id for source in sources_for_context("pain_listener")} == {
+        "hackernews_topstories",
         "producthunt_feed",
         "reddit_hot_rss",
     }
+    assert "producthunt_feed" not in runtime_source_ids("scan_worker")
 
 
 def test_service_lists_data_sources():
@@ -36,7 +42,11 @@ def test_service_lists_data_sources():
         "producthunt_feed",
         "reddit_hot_rss",
     }
+    by_id = {source["id"]: source for source in result["data"]["sources"]}
+    assert by_id["producthunt_feed"]["used_by_scan_workers"] is False
+    assert by_id["hackernews_topstories"]["used_by_scan_workers"] is True
     assert "Opportunity Data Sources" in result["data"]["formatted"]
+    assert "pain_listener" in result["data"]["formatted"]
 
 
 def test_region_filter_lists_china_sources():
@@ -111,6 +121,210 @@ def test_mainstream_global_sources_are_registered_but_not_runtime():
         assert source_id not in runtime_ids
 
 
+def test_active_and_optional_sources_declare_contexts_and_importable_adapters():
+    from ode.tools.source_registry import list_sources, load_source_adapter
+
+    for source in list_sources():
+        if source.status not in {"active", "optional"}:
+            continue
+
+        assert source.contexts
+        assert callable(load_source_adapter(source))
+
+
+def test_scan_all_uses_scan_worker_context(monkeypatch):
+    from ode.tools import trend_scanner
+    from ode.tools.sources import google_trends, hackernews, producthunt, reddit
+
+    def fake_google(keywords, timeframe="today 3-m", geo="", source_notes=None):
+        return [{
+            "source_id": "google_trends",
+            "source": "google_trends",
+            "title": keywords[0],
+            "keyword": keywords[0],
+            "strength": "强",
+        }]
+
+    def fake_hn(top_n=30, source_notes=None):
+        return [{
+            "source_id": "hackernews_topstories",
+            "source": "hackernews",
+            "title": "AI agent pain",
+            "keyword": "",
+            "strength": "强",
+        }]
+
+    def fake_reddit(subreddits, limit=10, source_notes=None):
+        return [{
+            "source_id": "reddit_hot_rss",
+            "source": f"reddit/r/{subreddits[0]}",
+            "title": "AI agent workflow pain",
+            "keyword": "",
+            "strength": "中",
+        }]
+
+    def fail_producthunt(limit=30, source_notes=None):
+        raise AssertionError("scan_worker must not call Product Hunt")
+
+    monkeypatch.setattr(google_trends, "scan", fake_google)
+    monkeypatch.setattr(hackernews, "scan", fake_hn)
+    monkeypatch.setattr(reddit, "scan", fake_reddit)
+    monkeypatch.setattr(producthunt, "scan", fail_producthunt)
+
+    signals = trend_scanner.scan_all(
+        keywords=["AI"],
+        hn_top=1,
+        subreddits=["SaaS"],
+    )
+
+    assert {signal["source_id"] for signal in signals} == {
+        "google_trends",
+        "hackernews_topstories",
+        "reddit_hot_rss",
+    }
+
+
+def test_pain_listener_context_dispatches_producthunt(monkeypatch):
+    from ode.tools.sources import hackernews, producthunt, reddit
+    from ode.tools.source_dispatch import scan_for_context
+
+    def fake_hn(top_n=30, source_notes=None):
+        return [{"source_id": "hackernews_topstories", "title": "HN"}]
+
+    def fake_reddit(subreddits, limit=10, source_notes=None):
+        return [{"source_id": "reddit_hot_rss", "title": "Reddit"}]
+
+    def fake_producthunt(limit=30, source_notes=None):
+        return [{"source_id": "producthunt_feed", "title": f"PH {limit}"}]
+
+    monkeypatch.setattr(hackernews, "scan", fake_hn)
+    monkeypatch.setattr(reddit, "scan", fake_reddit)
+    monkeypatch.setattr(producthunt, "scan", fake_producthunt)
+
+    signals = scan_for_context(
+        "pain_listener",
+        hn_top=1,
+        subreddits=["SaaS"],
+        product_hunt_limit=7,
+    )
+
+    assert [signal["source_id"] for signal in signals] == [
+        "hackernews_topstories",
+        "producthunt_feed",
+        "reddit_hot_rss",
+    ]
+    assert signals[1]["title"] == "PH 7"
+
+
+def test_pain_listener_context_can_disable_producthunt(monkeypatch):
+    from ode.tools.sources import hackernews, producthunt, reddit
+    from ode.tools.source_dispatch import scan_for_context_with_notes
+
+    def fake_hn(top_n=30, source_notes=None):
+        return [{"source_id": "hackernews_topstories", "title": "HN"}]
+
+    def fake_reddit(subreddits, limit=10, source_notes=None):
+        return [{"source_id": "reddit_hot_rss", "title": "Reddit"}]
+
+    def fail_producthunt(limit=30, source_notes=None):
+        raise AssertionError("Product Hunt should be disabled")
+
+    monkeypatch.setattr(hackernews, "scan", fake_hn)
+    monkeypatch.setattr(reddit, "scan", fake_reddit)
+    monkeypatch.setattr(producthunt, "scan", fail_producthunt)
+
+    result = scan_for_context_with_notes(
+        "pain_listener",
+        hn_top=1,
+        subreddits=["SaaS"],
+        include_product_hunt=False,
+    )
+
+    assert [signal["source_id"] for signal in result["signals"]] == [
+        "hackernews_topstories",
+        "reddit_hot_rss",
+    ]
+    assert {event["source_id"] for event in result["source_events"]} == {
+        "hackernews_topstories",
+        "reddit_hot_rss",
+    }
+
+
+def test_reddit_http_failure_records_structured_note(monkeypatch):
+    from ode.tools.sources import reddit
+
+    class FakeResponse:
+        status_code = 403
+        text = ""
+
+    calls = {"count": 0}
+
+    def fake_get(url, headers=None, timeout=10, **kwargs):
+        calls["count"] += 1
+        return FakeResponse()
+
+    import requests
+
+    monkeypatch.setattr(requests, "get", fake_get)
+    monkeypatch.setattr(reddit.time, "sleep", lambda seconds: None)
+    notes = []
+
+    signals = reddit.scan(["SaaS"], limit=1, source_notes=notes)
+
+    assert signals == []
+    assert calls["count"] == 2
+    assert notes[0]["source_id"] == "reddit_hot_rss"
+    assert notes[0]["status"] == "failed"
+    assert notes[0]["http_status"] == 403
+    assert notes[0]["attempts"] == 2
+
+
+def test_producthunt_malformed_xml_records_structured_note(monkeypatch):
+    from ode.tools.sources import producthunt
+
+    class FakeResponse:
+        status_code = 200
+        text = "<not-xml"
+
+    def fake_get(url, headers=None, timeout=10, **kwargs):
+        return FakeResponse()
+
+    import requests
+
+    monkeypatch.setattr(requests, "get", fake_get)
+    notes = []
+
+    signals = producthunt.scan(limit=1, source_notes=notes)
+
+    assert signals == []
+    assert notes[0]["source_id"] == "producthunt_feed"
+    assert notes[0]["status"] == "failed"
+    assert notes[0]["reason"] == "malformed_xml"
+
+
+def test_hackernews_non_list_payload_records_structured_note(monkeypatch):
+    from ode.tools.sources import hackernews
+
+    class FakeResponse:
+        def json(self):
+            return {"error": "rate limited"}
+
+    def fake_get(url, timeout=10, **kwargs):
+        return FakeResponse()
+
+    import requests
+
+    monkeypatch.setattr(requests, "get", fake_get)
+    notes = []
+
+    signals = hackernews.scan(top_n=1, source_notes=notes)
+
+    assert signals == []
+    assert notes[0]["source_id"] == "hackernews_topstories"
+    assert notes[0]["status"] == "failed"
+    assert notes[0]["reason"] == "unexpected_topstories_payload"
+
+
 def test_scanner_signals_include_source_ids(monkeypatch):
     from ode.tools import trend_scanner
 
@@ -167,6 +381,7 @@ def test_producthunt_feed_scanner_includes_source_id(monkeypatch):
     assert signals[0]["source_id"] == "producthunt_feed"
     assert signals[0]["source"] == "producthunt"
     assert signals[0]["summary"] == "Debug AI agent workflow failures"
+    assert signals[0]["strength"] == "强"
 
 
 def test_reddit_scanner_keeps_feed_summary(monkeypatch):

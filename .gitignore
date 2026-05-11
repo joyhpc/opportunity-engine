@@ -10,6 +10,7 @@ data/opportunities/
 data/signals/
 data/competitors/
 data/evidence/
+data/alerts/
 data/reports/
 data/cache.db
 

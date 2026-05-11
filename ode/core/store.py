@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 from .models import Opportunity, Signal, Competitor, Evidence
 from .constants import (
     OPPORTUNITIES_DIR, SIGNALS_DIR, COMPETITORS_DIR, EVIDENCE_DIR,
-    REPORTS_DIR, SCHEMA_VERSION,
+    REPORTS_DIR, ALERTS_DIR, SCHEMA_VERSION,
 )
 
 
@@ -173,6 +173,10 @@ def save_evidence(ev: Evidence) -> Path:
 
 def reports_dir() -> Path:
     return _ensure_dir(_project_root() / REPORTS_DIR)
+
+
+def alerts_dir() -> Path:
+    return _ensure_dir(_project_root() / ALERTS_DIR)
 
 
 def find_opportunity_by_name(name: str) -> Optional[Opportunity]:

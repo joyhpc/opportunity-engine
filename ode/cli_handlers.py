@@ -13,6 +13,7 @@ import sys
 from pathlib import Path
 
 from ode import service
+from ode.cli_io import CliInputError, load_profile_arg, split_csv_arg
 
 
 def cmd_create(args):
@@ -255,8 +256,8 @@ def cmd_compare(args):
 
 def cmd_explore(args):
     """Open-ended opportunity exploration — no idea needed."""
-    subreddits = [s.strip() for s in args.reddit.split(",")] if args.reddit else None
-    keywords = [k.strip() for k in args.keywords.split(",")] if args.keywords else None
+    subreddits = split_csv_arg(args.reddit)
+    keywords = split_csv_arg(args.keywords)
 
     print("Scanning signals from HN, Reddit, and Trends...", file=sys.stderr)
     result = asyncio.run(service.explore_signals(
@@ -275,11 +276,14 @@ def cmd_explore(args):
 
 def cmd_pain(args):
     """Listen for pain points across Reddit, HN, and Product Hunt."""
-    subreddits = [s.strip() for s in args.reddit.split(",")] if args.reddit else None
-    keywords = [k.strip() for k in args.keywords.split(",")] if args.keywords else None
+    subreddits = split_csv_arg(args.reddit)
+    keywords = split_csv_arg(args.keywords)
     profile = _load_profile_arg(args)
 
-    print("Listening for pain signals from Reddit, HN, and Product Hunt...", file=sys.stderr)
+    source_names = ["Reddit", "HN"]
+    if args.product_hunt:
+        source_names.append("Product Hunt")
+    print(f"Listening for pain signals from {', '.join(source_names)}...", file=sys.stderr)
     result = asyncio.run(service.listen_pains(
         hn_top=args.hn_top if args.hn_top is not None else 50,
         subreddits=subreddits,
@@ -291,6 +295,9 @@ def cmd_pain(args):
         min_grade=args.min_grade or "E",
         limit=args.limit if args.limit is not None else 20,
     ))
+    if not result["ok"]:
+        print(result["message"], file=sys.stderr)
+        sys.exit(1)
 
     report = result["data"]["formatted"]
     print(report)
@@ -298,6 +305,64 @@ def cmd_pain(args):
     if args.output:
         Path(args.output).write_text(report, encoding="utf-8")
         print(f"\nSaved to: {args.output}", file=sys.stderr)
+
+
+def cmd_daily(args):
+    """Run daily opportunity review and update warning state."""
+    subreddits = split_csv_arg(args.reddit)
+    keywords = split_csv_arg(args.keywords)
+    profile = _load_profile_arg(args)
+
+    result = asyncio.run(service.run_daily_review(
+        hn_top=args.hn_top if args.hn_top is not None else 50,
+        subreddits=subreddits,
+        reddit_limit=args.reddit_limit if args.reddit_limit is not None else 15,
+        include_product_hunt=args.product_hunt,
+        product_hunt_limit=args.product_hunt_limit if args.product_hunt_limit is not None else 30,
+        keywords=keywords,
+        profile=profile,
+        min_grade=args.min_grade or "E",
+        limit=args.limit if args.limit is not None else 20,
+        cases_path=args.cases_path,
+        cases_region=args.cases_region,
+        cases_min_grade=args.cases_min_grade,
+        cases_top=args.cases_top,
+        include_explore=args.explore,
+        run_date=args.date,
+    ))
+    if not result["ok"]:
+        print(result["message"], file=sys.stderr)
+        sys.exit(1)
+
+    data = result["data"]
+    print(f"Daily report generated: {data['report_path']}")
+    print(f"Watchlist state: {data['state_path']}")
+    print()
+    print(data["report_text"])
+
+
+def cmd_init_alerts(args):
+    """Bootstrap warning priors and initial watchlist from revenue cases."""
+    profile = _load_profile_arg(args)
+    result = asyncio.run(service.initialize_warning_system(
+        cases_path=args.cases_path,
+        profile=profile,
+        region=args.region,
+        min_grade=args.min_grade,
+        top=args.top,
+        run_date=args.date,
+        reset=args.reset,
+    ))
+    if not result["ok"]:
+        print(result["message"], file=sys.stderr)
+        sys.exit(1)
+
+    data = result["data"]
+    print(f"Initial warning report generated: {data['report_path']}")
+    print(f"Watchlist state: {data['state_path']}")
+    print(f"Case priors: {data['priors_path']}")
+    print()
+    print(data["report_text"])
 
 
 def cmd_insights(args):
@@ -402,6 +467,8 @@ COMMANDS = {
     "compare": cmd_compare,
     "explore": cmd_explore,
     "pain": cmd_pain,
+    "daily": cmd_daily,
+    "init-alerts": cmd_init_alerts,
     "insights": cmd_insights,
     "lens": cmd_lens,
     "experiment": cmd_experiment,
@@ -427,21 +494,8 @@ def run_command(args) -> None:
 
 
 def _load_profile_arg(args) -> dict | None:
-    if getattr(args, "profile_json", None):
-        try:
-            return json.loads(args.profile_json)
-        except json.JSONDecodeError as exc:
-            print(f"Invalid JSON for --profile-json: {exc}", file=sys.stderr)
-            sys.exit(1)
-
-    if getattr(args, "profile", None):
-        try:
-            return json.loads(Path(args.profile).read_text(encoding="utf-8"))
-        except OSError as exc:
-            print(f"Cannot read --profile: {exc}", file=sys.stderr)
-            sys.exit(1)
-        except json.JSONDecodeError as exc:
-            print(f"Invalid profile JSON: {exc}", file=sys.stderr)
-            sys.exit(1)
-
-    return None
+    try:
+        return load_profile_arg(args)
+    except CliInputError as exc:
+        print(str(exc), file=sys.stderr)
+        sys.exit(1)

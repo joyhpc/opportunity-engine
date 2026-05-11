@@ -138,6 +138,132 @@
       "fit_tags": ["enterprise SaaS", "AI workflows", "contracts", "B2B"],
       "risk_flags": ["enterprise_procurement", "regulated"],
       "notes": "Useful pattern: high-value document workflows with compliance pressure; slower sales motion for small builders."
+    },
+    {
+      "id": "lovable_ai_app_builder_arr_202507",
+      "name": "Lovable AI app builder ARR",
+      "category": "AI app builder / developer tools",
+      "region": "global",
+      "published_at": "2025-07-23",
+      "claim": "Lovable said it passed $100M ARR eight months after its first $1M ARR.",
+      "metric_type": "arr",
+      "amount": 100000000,
+      "currency": "USD",
+      "period": "annual recurring revenue as of 2025-07",
+      "source_ids": ["funding_news", "hackernews_topstories"],
+      "evidence": [
+        {
+          "type": "company_pr",
+          "source_name": "Lovable",
+          "url": "https://lovable.dev/pt/blog/agent",
+          "notes": "Company-originated ARR milestone claim."
+        },
+        {
+          "type": "independent_media",
+          "source_name": "TechCrunch",
+          "url": "https://techcrunch.com/2025/07/23/eight-months-in-swedish-unicorn-lovable-crosses-the-100m-arr-milestone/",
+          "notes": "Independent media coverage of the same milestone."
+        }
+      ],
+      "fit_tags": ["developer tools", "AI agents", "app builder", "automation", "subscription"],
+      "risk_flags": ["platform_dependency", "crowded_market"],
+      "notes": "Useful pattern: natural-language app creation with fast self-serve monetization and strong viral/demo loops."
+    },
+    {
+      "id": "clay_gtm_automation_arr_202512",
+      "name": "Clay GTM automation ARR",
+      "category": "GTM automation",
+      "region": "global",
+      "published_at": "2025-12-08",
+      "claim": "Clay said it crossed $100M ARR with high enterprise net revenue retention.",
+      "metric_type": "arr",
+      "amount": 100000000,
+      "currency": "USD",
+      "period": "annual recurring revenue as of 2025-12",
+      "source_ids": ["linkedin_marketing_api", "funding_news"],
+      "evidence": [
+        {
+          "type": "company_pr",
+          "source_name": "Clay",
+          "url": "https://www.clay.com/blog/100m-arr",
+          "notes": "Company-originated ARR and retention claim."
+        }
+      ],
+      "fit_tags": ["automation", "sales workflows", "data enrichment", "B2B", "AI workflows"],
+      "risk_flags": ["enterprise_procurement", "data_dependency"],
+      "notes": "Useful pattern: spreadsheet-like workflow surface plus data integrations for high-value GTM jobs."
+    },
+    {
+      "id": "crescendo_ai_contact_center_arr_202509",
+      "name": "Crescendo AI contact center ARR trajectory",
+      "category": "AI customer support / contact center",
+      "region": "global",
+      "published_at": "2025-09-25",
+      "claim": "Crescendo announced it was on track to exceed $100M ARR by the end of 2025.",
+      "metric_type": "arr",
+      "amount": 100000000,
+      "currency": "USD",
+      "period": "projected annual recurring revenue for 2025",
+      "source_ids": ["linkedin_marketing_api", "funding_news"],
+      "evidence": [
+        {
+          "type": "company_pr",
+          "source_name": "Crescendo",
+          "url": "https://www.crescendo.ai/news/crescendo-to-exceed-100m-arr-as-global-adoption-of-its-first-ai-native-contact-center-accelerates",
+          "notes": "Company-originated forward-looking ARR trajectory claim."
+        }
+      ],
+      "fit_tags": ["AI workflows", "customer support", "contact center", "B2B", "automation"],
+      "risk_flags": ["enterprise_procurement", "human_operations"],
+      "notes": "Useful pattern: AI automation bundled with human escalation for measurable customer operations outcomes."
+    },
+    {
+      "id": "starburst_data_ai_platform_arr_202602",
+      "name": "Starburst data and AI platform ARR",
+      "category": "Data infrastructure / AI platform",
+      "region": "global",
+      "published_at": "2026-02-18",
+      "claim": "Starburst announced it surpassed $100M ARR and reached a $20M AI annual run rate.",
+      "metric_type": "arr",
+      "amount": 100000000,
+      "currency": "USD",
+      "period": "annual recurring revenue reached in 2025",
+      "source_ids": ["funding_news", "linkedin_marketing_api"],
+      "evidence": [
+        {
+          "type": "company_pr",
+          "source_name": "Starburst",
+          "url": "https://www.starburst.io/press-releases/starburst-crosses-100m-arr-as-enterprises-move-from-bi-to-ai/",
+          "notes": "Company-originated ARR, AI run-rate, and growth claim."
+        }
+      ],
+      "fit_tags": ["data infrastructure", "AI workflows", "enterprise SaaS", "analytics", "B2B"],
+      "risk_flags": ["enterprise_procurement", "technical_complexity"],
+      "notes": "Useful pattern: existing data platforms repositioning around AI readiness and enterprise workflow displacement."
+    },
+    {
+      "id": "front_customer_ops_arr_202509",
+      "name": "Front customer operations ARR",
+      "category": "Customer operations SaaS",
+      "region": "global",
+      "published_at": "2025-09-09",
+      "claim": "Front announced it surpassed $100M ARR as companies adopted AI-powered customer operations.",
+      "metric_type": "arr",
+      "amount": 100000000,
+      "currency": "USD",
+      "period": "annual recurring revenue as of 2025-09",
+      "source_ids": ["funding_news", "linkedin_marketing_api"],
+      "evidence": [
+        {
+          "type": "company_pr",
+          "source_name": "Business Wire / Front",
+          "url": "https://finance.yahoo.com/news/front-surpasses-100m-arr-companies-150000797.html",
+          "notes": "Company-originated ARR claim distributed through Business Wire and mirrored by Yahoo Finance."
+        }
+      ],
+      "fit_tags": ["AI workflows", "customer operations", "collaboration", "B2B", "automation"],
+      "risk_flags": ["enterprise_procurement", "crowded_market"],
+      "notes": "Useful pattern: collaboration system of record plus AI automation for recurring operational communication."
     }
   ]
 }

@@ -5,12 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field, asdict
 from typing import Any
 
-
-BUILD_NOW = "Build Now"
-VALIDATE_SOON = "Validate Soon"
-WATCH = "Watch"
-RESEARCH = "Research"
-IGNORE = "Ignore"
+from ode.core.recommendations import (
+    BUILD_NOW,
+    IGNORE,
+    RESEARCH,
+    VALIDATE_SOON,
+    WATCH,
+)
 
 
 @dataclass(frozen=True)
@@ -21,7 +22,13 @@ class FounderProfile:
     constraints: list[str] = field(default_factory=list)
     exploration_interests: list[str] = field(default_factory=list)
     channels: list[str] = field(default_factory=list)
+    preferred_channels: list[str] = field(default_factory=list)
+    negative_keywords: list[str] = field(default_factory=list)
+    soft_negative_keywords: list[str] = field(default_factory=list)
     hard_exclusions: list[str] = field(default_factory=list)
+    channel_weight: float = 7.0
+    negative_weight: float = 12.0
+    soft_negative_weight: float = 8.0
     validation_window_days: int = 30
     time_budget_hours_per_week: int = 10
     capital_budget_usd: float = 5000.0
@@ -82,6 +89,22 @@ def default_profile() -> FounderProfile:
             "technical communities",
             "founder networks",
             "builder communities",
+        ],
+        preferred_channels=[
+            "reddit/r/saas",
+            "reddit/r/sideproject",
+            "reddit/r/webdev",
+        ],
+        negative_keywords=[
+            "hardware",
+            "clinical",
+            "medical device",
+            "manufacturing",
+        ],
+        soft_negative_keywords=[
+            "enterprise procurement",
+            "government",
+            "regulated",
         ],
         hard_exclusions=[
             "illegal",
