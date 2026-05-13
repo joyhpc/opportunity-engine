@@ -151,6 +151,8 @@ python3 -m ode portfolio
 
 三层扁平架构 — 详见 [ARCHITECTURE.md](ARCHITECTURE.md)
 
+![ODE Agent Runtime 架构图](docs/assets/ode-agent-runtime-architecture.png)
+
 ![ODE 项目架构图](docs/assets/ode-architecture.png)
 
 ```
