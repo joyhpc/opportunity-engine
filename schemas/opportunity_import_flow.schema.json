@@ -7,7 +7,9 @@
     "schema_version",
     "source",
     "seed",
+    "solution_path",
     "stages",
+    "tool_coverage",
     "gates",
     "acceptance",
     "verification",
@@ -16,7 +18,7 @@
   "properties": {
     "schema_version": {
       "type": "string",
-      "const": "1.0.0"
+      "const": "1.1.0"
     },
     "source": {
       "type": "object",
@@ -40,19 +42,54 @@
         "constraints": { "type": "array", "items": { "type": "string" } }
       }
     },
+    "solution_path": {
+      "type": "array",
+      "minItems": 8,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "repo_resources", "output"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "repo_resources": { "type": "array", "items": { "type": "string" } },
+          "output": { "type": "string" }
+        }
+      }
+    },
     "stages": {
       "type": "array",
       "minItems": 7,
       "items": {
         "type": "object",
-        "required": ["id", "name", "imported_subtasks", "deliverables", "done_when"],
+        "required": ["id", "name", "imported_subtasks", "tool_plan", "deliverables", "done_when"],
         "properties": {
           "id": { "type": "string" },
           "name": { "type": "string" },
           "imported_subtasks": { "type": "array", "items": { "type": "string" } },
+          "tool_plan": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["tool_file", "role", "why_best_fit"],
+              "properties": {
+                "tool_file": { "type": "string" },
+                "role": { "type": "string" },
+                "why_best_fit": { "type": "string" }
+              }
+            }
+          },
           "deliverables": { "type": "array", "items": { "type": "string" } },
           "done_when": { "type": "array", "items": { "type": "string" } }
         }
+      }
+    },
+    "tool_coverage": {
+      "type": "object",
+      "required": ["policy", "used_tool_files", "uncovered_tool_files"],
+      "properties": {
+        "policy": { "type": "string" },
+        "used_tool_files": { "type": "array", "items": { "type": "string" } },
+        "uncovered_tool_files": { "type": "array", "items": { "type": "string" } }
       }
     },
     "gates": {

@@ -28,7 +28,8 @@ ode/
 ├── cli_parser.py        # argparse command definitions
 ├── cli_handlers.py      # terminal text handlers over service.py
 ├── cli_json.py          # raw JSON service output mode
-├── service.py           # surface-neutral async API, no print/sys.exit
+├── service.py           # surface-neutral async facade over ode/services/
+├── services/            # domain service implementations behind the facade
 ├── core/                # dataclasses, constants, YAML store
 ├── engine/              # pipeline DAG, gates, async workers, portfolio logic
 ├── heuristics/          # explore/bridge/reframe/synthesize, optional reasoning
@@ -36,8 +37,8 @@ ode/
 ├── data/                # cache and knowledge infrastructure adapters
 ├── imports/             # adapters from imported assets into ODE contracts
 ├── integrations/        # Claude Skill, MCP, project-tracker bridges
-├── api/                 # future REST surface placeholder
-└── web/                 # future dashboard placeholder
+├── api/                 # reserved REST surface package; no empty stub module
+└── web/                 # reserved dashboard package; no empty stub module
 ```
 
 The intended dependency direction is:
@@ -75,6 +76,7 @@ material.
 7. New user-facing behavior should enter through `service.py` first, then be exposed by CLI/API/MCP as thin surfaces.
 8. Personal fit is a lens, not an early hard filter. High-discovery wildcard opportunities should remain visible.
 9. Revenue cases are reference material, not opportunities. They should become opportunities only after evidence grading and fit analysis.
+10. Generated reports, renders, plans, and validation artifacts need a pre-write governance decision. Use `ode.core.artifacts.plan_artifact_write` to avoid overwriting user-authored files or duplicating confusing artifacts.
 
 ## Current Cleanup Inventory
 
@@ -82,8 +84,9 @@ material.
 |------|---------------|----------|
 | `ode/` | Main product package with clear subpackages | Keep as active runtime root |
 | `imports/opportunity-detector/` | Audited source material from legacy repo | Keep isolated; access through `ode/imports/detector_integration.py` |
-| `prototypes/storybook/` | Large prototype scripts and product notes | Keep out of runtime; promote only after tests/contracts |
-| `ode/api/`, `ode/web/`, MCP | Phase 3 placeholders | Keep, but mark as access surfaces rather than core |
+| `prototypes/storybook/` | Large prototype scripts and product notes | Keep out of runtime; prefer `pipeline_v2.py` for structured tool_use experiments; keep `pipeline.py` as deprecated history only |
+| `ode/integrations/mcp_server.py` | MCP access surface | Keep; registers read-only service commands as MCP tools |
+| `ode/api/`, `ode/web/` | Reserved access-surface packages | Keep directories only; do not ship empty placeholder modules |
 | `.pytest_cache/`, `__pycache__/` | Local runtime artifacts | Ignore and remove locally when cleaning |
 | Docs test count | README/navigation drifted from test reality | Keep synced to `python -m pytest` result |
 
@@ -103,6 +106,8 @@ material.
 - Add tests for JSON mode and error formatting before touching CLI internals.
 - Status: first pass complete. `ode/cli.py` is now a thin entrypoint and
   behavior is covered by `tests/test_cli_surface.py`.
+- Status: service implementation is split into `ode/services/*`; `ode/service.py`
+  remains the compatibility facade for existing surfaces.
 
 ### Phase 2 - Import Promotion
 
@@ -112,7 +117,8 @@ material.
 
 ### Phase 3 - Access Surfaces
 
-- Implement MCP/API/Web as thin adapters over `ode.service`.
+- MCP is implemented as a thin adapter over the shared service-command registry.
+- API/Web are reserved packages only until contract tests and dependency choices exist.
 - Do not duplicate scoring, gate, or persistence logic in access layers.
 - Add contract tests before exposing new surfaces.
 

@@ -11,7 +11,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from ode.imports.detector_integration import build_closed_loop_plan, load_seed, validate_plan
+from ode.imports.detector_integration import (
+    build_closed_loop_plan,
+    load_seed,
+    validate_plan,
+    validate_plan_schema,
+)
 
 
 DEFAULT_SEED = ROOT / "examples" / "import_integration" / "opportunity_seed.json"
@@ -27,7 +32,7 @@ def main() -> int:
 
     seed = load_seed(args.seed)
     plan = build_closed_loop_plan(seed, ROOT)
-    errors = validate_plan(plan)
+    errors = validate_plan_schema(plan, ROOT) + validate_plan(plan)
     if errors:
         for error in errors:
             print(f"[FAIL] {error}", file=sys.stderr)

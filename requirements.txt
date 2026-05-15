@@ -10,3 +10,4 @@ requests>=2.28
 # Testing
 pytest>=7.0
 pytest-asyncio>=0.21
+jsonschema>=4.0

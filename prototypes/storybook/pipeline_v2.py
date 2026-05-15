@@ -19,7 +19,7 @@ import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 OUTPUT_DIR = Path(__file__).parent / "output_v2"
 
@@ -188,8 +188,83 @@ RULES:
 """
 
 
+def build_pages_from_tool_input(
+    tool_input: dict[str, Any],
+    child: ChildProfile,
+    config: StoryConfig,
+) -> tuple[list[PageContent], list[str]]:
+    """Validate Claude tool_use input and convert it into PageContent objects."""
+
+    issues: list[str] = []
+    if not isinstance(tool_input, dict):
+        return [], ["CRITICAL: Tool output must be an object"]
+
+    if "pages" not in tool_input:
+        keys = ", ".join(str(key) for key in tool_input.keys()) or "<none>"
+        return [], [f"CRITICAL: Tool output missing required 'pages' field. Keys: {keys}"]
+
+    pages_data = tool_input["pages"]
+    if not isinstance(pages_data, list) or not pages_data:
+        return [], ["CRITICAL: Tool output field 'pages' must be a non-empty list"]
+
+    if len(pages_data) != config.pages:
+        return [], [f"CRITICAL: Requested {config.pages} pages, got {len(pages_data)}"]
+
+    for index, page in enumerate(pages_data, start=1):
+        if not isinstance(page, dict):
+            issues.append(f"CRITICAL: Page {index} must be an object")
+            continue
+
+        missing = [
+            field_name
+            for field_name in ("page_num", "text", "scene", "emotion")
+            if field_name not in page
+        ]
+        if missing:
+            issues.append(f"CRITICAL: Page {index} missing required fields: {', '.join(missing)}")
+            continue
+
+        if not isinstance(page["page_num"], int) or isinstance(page["page_num"], bool):
+            issues.append(f"CRITICAL: Page {index} field 'page_num' must be an integer")
+        for field_name in ("text", "scene", "emotion"):
+            value = page[field_name]
+            if not isinstance(value, str) or not value.strip():
+                issues.append(f"CRITICAL: Page {index} field '{field_name}' must be a non-empty string")
+
+    if issues:
+        return [], issues
+
+    style_map = {
+        "watercolor": "soft watercolor 2D illustration, hand-painted children's picture book art, pastel colors, NOT a photograph, NOT 3D render, NOT realistic",
+        "flat_cartoon": "flat 2D vector cartoon illustration, bold bright colors, clean lines, cel-shaded, NOT a photograph, NOT 3D render, NOT realistic",
+        "ink_painting": "traditional Chinese ink wash painting 2D illustration, minimalist brushwork, rice paper texture, NOT a photograph, NOT 3D render, NOT realistic",
+    }
+    style_suffix = style_map.get(config.style, "children's book illustration")
+    short_anchor = build_short_anchor(child)
+
+    pages: list[PageContent] = []
+    for page in pages_data:
+        scene = page["scene"].strip()
+        illus_prompt = (
+            f"2D illustrated children's book page, {style_suffix}, "
+            f"{short_anchor}, {scene}, "
+            f"no text, no words, no letters, no watermark"
+        )
+        if len(illus_prompt) > 350:
+            illus_prompt = illus_prompt[:347] + "..."
+
+        pages.append(PageContent(
+            page_num=page["page_num"],
+            text=page["text"].strip(),
+            illustration_prompt=illus_prompt,
+            emotion=page["emotion"].strip(),
+        ))
+
+    return pages, []
+
+
 def generate_story_tooluse(child: ChildProfile, config: StoryConfig) -> tuple[list[PageContent], list[str]]:
-    """Generate story using Claude tool_use — guaranteed structured output."""
+    """Generate story using Claude tool_use and local schema validation."""
     issues = []
 
     try:
@@ -206,7 +281,6 @@ def generate_story_tooluse(child: ChildProfile, config: StoryConfig) -> tuple[li
     client = anthropic.Anthropic(api_key=api_key)
     constraints = get_age_constraints(child.age)
     anchor = build_character_anchor(child)
-    short_anchor = build_short_anchor(child)
 
     family_desc = ""
     if child.family:
@@ -260,51 +334,10 @@ Use the create_storybook tool to output the story."""
             issues.append("CRITICAL: No tool_use block in response")
             return [], issues
 
-        pages_data = tool_block.input.get("pages", [])
-
-        if not pages_data:
-            # Fallback: try other possible keys
-            for key in tool_block.input:
-                val = tool_block.input[key]
-                if isinstance(val, list) and len(val) > 0:
-                    pages_data = val
-                    issues.append(f"INFO: Found pages under key '{key}' instead of 'pages'")
-                    break
-
-        if not pages_data:
-            issues.append(f"CRITICAL: No pages in tool output. Keys: {list(tool_block.input.keys())}")
+        pages, validation_issues = build_pages_from_tool_input(tool_block.input, child, config)
+        issues.extend(validation_issues)
+        if not pages:
             return [], issues
-
-        # Build illustration prompts from scenes
-        style_map = {
-            "watercolor": "soft watercolor 2D illustration, hand-painted children's picture book art, pastel colors, NOT a photograph, NOT 3D render, NOT realistic",
-            "flat_cartoon": "flat 2D vector cartoon illustration, bold bright colors, clean lines, cel-shaded, NOT a photograph, NOT 3D render, NOT realistic",
-            "ink_painting": "traditional Chinese ink wash painting 2D illustration, minimalist brushwork, rice paper texture, NOT a photograph, NOT 3D render, NOT realistic",
-        }
-        style_suffix = style_map.get(config.style, "children's book illustration")
-
-        pages = []
-        for p in pages_data:
-            if isinstance(p, str):
-                issues.append(f"ISSUE: page entry is string, not dict: {p[:50]}")
-                continue
-            # Compose illustration prompt: anchor + scene + style + negative
-            scene = p.get("scene", "")
-            illus_prompt = (
-                f"2D illustrated children's book page, {style_suffix}, "
-                f"{short_anchor}, {scene}, "
-                f"no text, no words, no letters, no watermark"
-            )
-            # Truncate if too long
-            if len(illus_prompt) > 350:
-                illus_prompt = illus_prompt[:347] + "..."
-
-            pages.append(PageContent(
-                page_num=p["page_num"],
-                text=p["text"],
-                illustration_prompt=illus_prompt,
-                emotion=p.get("emotion", "neutral"),
-            ))
 
         # ── 质量检查 ──
         if len(pages) != config.pages:

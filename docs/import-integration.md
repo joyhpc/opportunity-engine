@@ -11,14 +11,21 @@ material rather than a second active product.
   deterministic adapter.
 - `ode/imports/detector_integration.py` is the minimal task executor: read import
   assets, map them onto the ODE seven-stage flow, and validate the result.
+- `tools/validate_import_integration.py` checks both the JSON Schema contract
+  and the domain-specific plan rules before comparing against the golden output.
+- The plan starts with `PLAN_FIRST`, which audits repo templates, subtasks, and
+  tool files before execution. Every imported detector tool must be assigned to
+  a stage-level `tool_plan`, so the best available repo tool is not silently
+  skipped.
 
 ## Closed Loop
 
 1. Capture a seed opportunity with signals and constraints.
-2. Convert it into a seven-stage ODE plan.
-3. Check gates at `SCREEN`, `VALIDATE`, and `PLAN`.
-4. Produce explicit artifacts and verification commands.
-5. Run the same checks on Windows, macOS, and Linux CI.
+2. Plan from available repo resources before execution.
+3. Convert the task into a seven-stage ODE plan with explicit tool assignments.
+4. Check gates at `SCREEN`, `VALIDATE`, and `PLAN`.
+5. Produce explicit artifacts and verification commands.
+6. Run the same checks on Windows, macOS, and Linux CI.
 
 ## Commands
 

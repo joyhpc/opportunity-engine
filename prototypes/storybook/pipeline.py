@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""AI 童话绘本原型 — 最小可行 Pipeline
+"""AI 童话绘本原型 — deprecated 最小可行 Pipeline
+
+Deprecated: keep this v1 script only as historical prototype material. New
+experiments should use pipeline_v2.py, which relies on tool_use structured
+output instead of prompt-only JSON parsing.
 
 验证目标：
 1. 故事生成质量（年龄适配、个性化深度、叙事完整性）
@@ -17,6 +21,12 @@ import sys
 import time
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
+
+
+DEPRECATED_NOTICE = (
+    "DEPRECATED: prototypes/storybook/pipeline.py uses prompt-only JSON parsing. "
+    "Use prototypes/storybook/pipeline_v2.py for structured tool_use output."
+)
 
 # ---------------------------------------------------------------------------
 # 数据模型
@@ -525,6 +535,7 @@ def run_validation():
     """运行完整验证管线。"""
     print("=" * 60)
     print("AI 童话绘本 — Pipeline 验证")
+    print(DEPRECATED_NOTICE)
     print("=" * 60)
 
     output_dir = Path(__file__).parent / "output"

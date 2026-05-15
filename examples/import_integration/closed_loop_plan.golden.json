@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "source": {
     "repository": "joyhpc/opportunity-detector",
     "import_path": "imports/opportunity-detector",
@@ -47,12 +47,108 @@
       "Unit economics must include support and privacy review cost."
     ]
   },
+  "solution_path": [
+    {
+      "id": "PLAN_FIRST",
+      "name": "Plan from repository resources",
+      "repo_resources": [
+        "source.template_files",
+        "source.subtask_files",
+        "source.tool_files"
+      ],
+      "output": "Overall staged solution path with every best-fit repo tool bound before execution."
+    },
+    {
+      "id": "SENSE",
+      "name": "Opportunity sensing",
+      "repo_resources": [
+        "subtask:signal_capture",
+        "imports/opportunity-detector/tools/trend_scanner.py",
+        "imports/opportunity-detector/tools/pain_miner.py"
+      ],
+      "output": "Signal list; Desk research memo; One-page opportunity brief"
+    },
+    {
+      "id": "SCREEN",
+      "name": "Initial screening",
+      "repo_resources": [
+        "subtask:business_planning",
+        "subtask:deep_analysis",
+        "subtask:market_screening",
+        "imports/opportunity-detector/tools/market_sizer.py",
+        "imports/opportunity-detector/tools/competitor_matrix.py",
+        "imports/opportunity-detector/tools/financial_model.py",
+        "imports/opportunity-detector/tools/opportunity_scorer.py"
+      ],
+      "output": "TAM/SAM/SOM estimate; Competitor map; Capability gap; Rough unit economics"
+    },
+    {
+      "id": "ANALYZE",
+      "name": "Deep analysis",
+      "repo_resources": [
+        "subtask:deep_analysis",
+        "imports/opportunity-detector/tools/market_sizer.py",
+        "imports/opportunity-detector/tools/competitor_matrix.py",
+        "imports/opportunity-detector/tools/financial_model.py"
+      ],
+      "output": "Market deep dive; Risk register; Financial model"
+    },
+    {
+      "id": "VALIDATE",
+      "name": "Validation",
+      "repo_resources": [
+        "subtask:validation",
+        "imports/opportunity-detector/tools/idea_validator.py"
+      ],
+      "output": "Hypothesis list; MVP design; Validation report"
+    },
+    {
+      "id": "PLAN",
+      "name": "Business planning",
+      "repo_resources": [
+        "subtask:business_planning",
+        "imports/opportunity-detector/tools/financial_model.py",
+        "imports/opportunity-detector/tools/report_generator.py"
+      ],
+      "output": "Business model; Resource plan; GTM plan; Risk mitigation plan"
+    },
+    {
+      "id": "LAUNCH",
+      "name": "Execution",
+      "repo_resources": [
+        "imports/opportunity-detector/tools/report_generator.py"
+      ],
+      "output": "Phase-1 execution checklist; First revenue record"
+    },
+    {
+      "id": "MONITOR",
+      "name": "Monitoring",
+      "repo_resources": [
+        "imports/opportunity-detector/tools/trend_scanner.py",
+        "imports/opportunity-detector/tools/pain_miner.py",
+        "imports/opportunity-detector/tools/report_generator.py"
+      ],
+      "output": "Metrics dashboard; Iteration review"
+    }
+  ],
   "stages": [
     {
       "id": "SENSE",
       "name": "Opportunity sensing",
       "imported_subtasks": [
         "signal_capture"
+      ],
+      "tool_plan": [
+        {
+          "tool_file": "imports/opportunity-detector/tools/trend_scanner.py",
+          "role": "Scan trends and community signals before any scoring work.",
+          "why_best_fit": "It is the imported detector tool dedicated to trend and signal capture."
+        },
+        {
+          "tool_file": "imports/opportunity-detector/tools/pain_miner.py",
+          "role": "Extract repeated user pains from community and interview inputs.",
+          "why_best_fit": "It turns raw signals into pain evidence before screening starts."
+        }
       ],
       "deliverables": [
         "Signal list",
@@ -72,6 +168,28 @@
         "deep_analysis",
         "market_screening"
       ],
+      "tool_plan": [
+        {
+          "tool_file": "imports/opportunity-detector/tools/market_sizer.py",
+          "role": "Estimate TAM/SAM/SOM during the first market screen.",
+          "why_best_fit": "It is the purpose-built sizing tool referenced by the market screening template."
+        },
+        {
+          "tool_file": "imports/opportunity-detector/tools/competitor_matrix.py",
+          "role": "Build the quick competitor map for initial positioning.",
+          "why_best_fit": "It is the best available repo tool for competitor landscape structure."
+        },
+        {
+          "tool_file": "imports/opportunity-detector/tools/financial_model.py",
+          "role": "Run rough unit economics before the first Go/Maybe/Kill decision.",
+          "why_best_fit": "It is the imported model for CAC, LTV, margin, and payback assumptions."
+        },
+        {
+          "tool_file": "imports/opportunity-detector/tools/opportunity_scorer.py",
+          "role": "Convert the screen into a scored Go/Maybe/Kill recommendation.",
+          "why_best_fit": "It is the explicit scorecard tool for the screening gate."
+        }
+      ],
       "deliverables": [
         "TAM/SAM/SOM estimate",
         "Competitor map",
@@ -89,6 +207,23 @@
       "imported_subtasks": [
         "deep_analysis"
       ],
+      "tool_plan": [
+        {
+          "tool_file": "imports/opportunity-detector/tools/market_sizer.py",
+          "role": "Refine segment sizing for the deep market analysis.",
+          "why_best_fit": "Deep analysis should reuse the sizing tool instead of inventing a new estimate path."
+        },
+        {
+          "tool_file": "imports/opportunity-detector/tools/competitor_matrix.py",
+          "role": "Run the deeper competitor teardown and differentiation map.",
+          "why_best_fit": "The same matrix tool is the best fit for both quick and deep competitive work."
+        },
+        {
+          "tool_file": "imports/opportunity-detector/tools/financial_model.py",
+          "role": "Build full NPV, sensitivity, and scenario analysis.",
+          "why_best_fit": "It is the best available financial tool for the ANALYZE gate."
+        }
+      ],
       "deliverables": [
         "Market deep dive",
         "Risk register",
@@ -104,6 +239,13 @@
       "name": "Validation",
       "imported_subtasks": [
         "validation"
+      ],
+      "tool_plan": [
+        {
+          "tool_file": "imports/opportunity-detector/tools/idea_validator.py",
+          "role": "Select validation experiments and pass/fail checks for critical assumptions.",
+          "why_best_fit": "It is the imported detector tool focused on validation design."
+        }
       ],
       "deliverables": [
         "Hypothesis list",
@@ -121,6 +263,18 @@
       "imported_subtasks": [
         "business_planning"
       ],
+      "tool_plan": [
+        {
+          "tool_file": "imports/opportunity-detector/tools/financial_model.py",
+          "role": "Translate validation results into budget and resource planning assumptions.",
+          "why_best_fit": "Business planning should carry forward the same inspected economics model."
+        },
+        {
+          "tool_file": "imports/opportunity-detector/tools/report_generator.py",
+          "role": "Assemble the business model, GTM, resource plan, and risk plan artifacts.",
+          "why_best_fit": "It is the repo tool for turning analysis outputs into shareable planning artifacts."
+        }
+      ],
       "deliverables": [
         "Business model",
         "Resource plan",
@@ -135,6 +289,13 @@
       "id": "LAUNCH",
       "name": "Execution",
       "imported_subtasks": [],
+      "tool_plan": [
+        {
+          "tool_file": "imports/opportunity-detector/tools/report_generator.py",
+          "role": "Generate the launch checklist and first revenue record artifact.",
+          "why_best_fit": "The launch phase needs a durable execution artifact, not a new analysis tool."
+        }
+      ],
       "deliverables": [
         "Phase-1 execution checklist",
         "First revenue record"
@@ -147,6 +308,23 @@
       "id": "MONITOR",
       "name": "Monitoring",
       "imported_subtasks": [],
+      "tool_plan": [
+        {
+          "tool_file": "imports/opportunity-detector/tools/trend_scanner.py",
+          "role": "Continue monitoring market and community signal changes.",
+          "why_best_fit": "Monitoring should reuse the scanner rather than silently dropping signal capture."
+        },
+        {
+          "tool_file": "imports/opportunity-detector/tools/pain_miner.py",
+          "role": "Track recurring user pain after launch.",
+          "why_best_fit": "It is the best repo fit for turning qualitative monitoring into repeatable evidence."
+        },
+        {
+          "tool_file": "imports/opportunity-detector/tools/report_generator.py",
+          "role": "Produce iteration reviews from monitoring data.",
+          "why_best_fit": "It keeps the monitor loop inspectable through generated artifacts."
+        }
+      ],
       "deliverables": [
         "Metrics dashboard",
         "Iteration review"
@@ -156,6 +334,20 @@
       ]
     }
   ],
+  "tool_coverage": {
+    "policy": "Every imported detector tool must be assigned to at least one stage before execution.",
+    "used_tool_files": [
+      "imports/opportunity-detector/tools/competitor_matrix.py",
+      "imports/opportunity-detector/tools/financial_model.py",
+      "imports/opportunity-detector/tools/idea_validator.py",
+      "imports/opportunity-detector/tools/market_sizer.py",
+      "imports/opportunity-detector/tools/opportunity_scorer.py",
+      "imports/opportunity-detector/tools/pain_miner.py",
+      "imports/opportunity-detector/tools/report_generator.py",
+      "imports/opportunity-detector/tools/trend_scanner.py"
+    ],
+    "uncovered_tool_files": []
+  },
   "gates": [
     {
       "stage": "SCREEN",
