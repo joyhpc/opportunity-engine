@@ -2,7 +2,7 @@
 
 ODE is a local, file-backed opportunity discovery toolkit. It helps an operator or agent turn vague market directions into auditable opportunities, signals, scores, warnings, diagnostics, and reports.
 
-The current product is a Python CLI plus service layer. It is not a web app and it does not ship a REST server. [ode/api](./ode/api) and [ode/web](./ode/web) are reserved package directories only.
+The primary product is a Python CLI plus service layer. The repo also includes an optional local browser UI under [web](./web), kept outside the runtime package and wired only through shared service commands. [ode/api](./ode/api) and [ode/web](./ode/web) are reserved package directories only.
 
 ## Current Truth
 
@@ -12,10 +12,11 @@ The current product is a Python CLI plus service layer. It is not a web app and 
 - Public service facade: [ode/service.py](./ode/service.py).
 - Actual service implementations: [ode/services](./ode/services).
 - Shared command registry: [ode/service_commands.py](./ode/service_commands.py); CLI JSON mode, Claude Skill, and MCP should route through it.
+- Optional local web UI: [web](./web), installed separately and tested through [web/tests](./web/tests).
 - Persistence: YAML files under local `data/`, with a small SQLite cache at `data/cache.db`.
 - Data root: `ODE_ROOT` if set; otherwise the current checkout when running inside the repo; otherwise the installed package checkout; finally `~/opportunity-engine`.
 - Automated scan sources today: Hacker News, Reddit RSS, optional Google Trends. Pain listening also uses Product Hunt as solution-side launch evidence.
-- Tests collected on 2026-05-17: 225.
+- Tests collected on 2026-05-18: 234.
 
 ## Quick Start
 
@@ -102,7 +103,9 @@ python -m ode --json cases --min-grade C --top 5
 | [ode/imports/detector_integration.py](./ode/imports/detector_integration.py) | 将 [imports/opportunity-detector](./imports/opportunity-detector) 审计材料转换成 ODE 导入计划。 |
 | [ode/integrations/claude_skill.py](./ode/integrations/claude_skill.py) | Claude Code `/ode` 命令集成。 |
 | [ode/integrations/mcp_server.py](./ode/integrations/mcp_server.py) | MCP 只读工具注册，目前不暴露写入型工具。 |
-| [tests](./tests) | pytest 测试入口，覆盖 CLI、服务边界、数据源、启发模块、DBS、预警和导入契约。 |
+| [web](./web) | 可选本地浏览器 UI，不进入 `ode` 包；通过 `ode.service_commands` 调用核心能力。 |
+| [web/bridge.py](./web/bridge.py) | Web 层到服务命令注册表的薄桥接。 |
+| [tests](./tests), [web/tests](./web/tests) | pytest 测试入口，覆盖 CLI、服务边界、数据源、启发模块、DBS、预警、导入契约和可选 Web 桥接。 |
 | [tools/check_environment.py](./tools/check_environment.py) | 检查仓库运行所需的关键文件是否存在。 |
 | [tools/validate_import_integration.py](./tools/validate_import_integration.py) | 校验导入契约和 golden 输出。 |
 
@@ -243,8 +246,8 @@ data/
 | Claude Skill | active | `/ode` handler routes registered commands through the shared registry. |
 | MCP | partial | Registers read-only service tools only. |
 | project-tracker | bridge exists | Promotion bridge exists, but normal ODE workflows do not require it. |
-| REST/API | deferred | No FastAPI server is shipped. |
-| Web dashboard | deferred | No dashboard server is shipped. |
+| Public REST/API | deferred | No packaged API server is shipped under `ode/`; local web endpoints are UI adapters only. |
+| Local Web UI | optional | [web](./web) runs with separate dependencies and calls only `service_commands`. |
 
 ## Tests
 
@@ -254,7 +257,13 @@ python tools/validate_import_integration.py
 python -m pytest
 ```
 
-The collected suite currently covers CLI surfaces, service boundaries, source registry dispatch, revenue cases, pain listening, daily warnings, DBS Lens, AI hardware workflow, import integration, project structure, artifact governance, and storybook prototype contracts.
+Optional local Web smoke, after installing [web/requirements.txt](./web/requirements.txt):
+
+```bash
+python tools/check_web_app.py
+```
+
+The collected suite currently covers CLI surfaces, service boundaries, source registry dispatch, revenue cases, pain listening, daily warnings, DBS Lens, AI hardware workflow, import integration, project structure, artifact governance, optional Web bridge/run/smoke behavior, and storybook prototype contracts.
 
 ## Documentation Map
 

@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 from ode import service
-from ode.cli_io import CliInputError, load_profile_arg, split_csv_arg
+from ode.cli_io import CliInputError, load_diagnosis_facts_arg, load_profile_arg, split_csv_arg
 
 
 def cmd_create(args):
@@ -102,6 +102,21 @@ def cmd_show(args):
             icon = {"pass": "+", "fail": "x", "partial": "~"}.get(e.get("outcome", ""), "?")
             cogs_str = f" COGS=${e['cogs']:.2f}" if e.get("cogs") else ""
             print(f"  [{icon}] {e.get('version', '?')}: {e.get('result', e.get('description', ''))[:60]}{cogs_str}")
+
+    latest_dbs = d.get("latest_dbs_diagnostic")
+    if latest_dbs:
+        result = latest_dbs.get("result", {})
+        print(f"\nDBS Lens:")
+        print(f"  Type: {latest_dbs.get('type', '')}")
+        if result.get("verdict"):
+            print(f"  Verdict: {result['verdict']}")
+        if result.get("blockers"):
+            print(f"  Blockers: {len(result['blockers'])}")
+            for blocker in result["blockers"][:3]:
+                print(f"    - {blocker}")
+        action = result.get("tomorrow_action") or result.get("next_action")
+        if action:
+            print(f"  Next: {action}")
 
     actuals = d.get("financials", {}).get("actuals", {})
     if actuals and actuals.get("cogs_per_unit") is not None:
@@ -241,6 +256,99 @@ def cmd_cases(args):
     print(result["data"]["formatted"])
 
 
+def cmd_dbs(args):
+    """Run the full DBS diagnostic chain."""
+    from ode.heuristics.dbs import format_session_report
+
+    try:
+        facts = load_diagnosis_facts_arg(args)
+    except CliInputError as exc:
+        print(str(exc), file=sys.stderr)
+        sys.exit(1)
+
+    result = asyncio.run(service.run_dbs_session(
+        args.text,
+        opp_id=args.opp_id,
+        facts=facts,
+        save=args.save,
+    ))
+    if not result["ok"]:
+        print(result["message"], file=sys.stderr)
+        sys.exit(1)
+    print(format_session_report(result["data"]["result"]))
+    if result["data"].get("saved"):
+        print(f"\nSaved diagnostic: {result['data']['diagnostic_id']}")
+
+
+def cmd_clarify(args):
+    """Clarify a fuzzy goal or business question."""
+    from ode.heuristics.dbs import format_goal_report
+
+    result = asyncio.run(service.clarify_goal(
+        args.text,
+        opp_id=args.opp_id,
+        save=args.save,
+    ))
+    if not result["ok"]:
+        print(result["message"], file=sys.stderr)
+        sys.exit(1)
+    print(format_goal_report(result["data"]["result"]))
+    if result["data"].get("saved"):
+        print(f"\nSaved diagnostic: {result['data']['diagnostic_id']}")
+
+
+def cmd_diagnose(args):
+    """Apply DBS business diagnosis to an opportunity."""
+    from ode.heuristics.dbs import format_business_diagnosis_report
+
+    try:
+        facts = load_diagnosis_facts_arg(args)
+    except CliInputError as exc:
+        print(str(exc), file=sys.stderr)
+        sys.exit(1)
+
+    result = asyncio.run(service.diagnose_business(
+        args.opp_id,
+        facts=facts,
+        save=args.save,
+    ))
+    if not result["ok"]:
+        print(result["message"], file=sys.stderr)
+        sys.exit(1)
+    print(format_business_diagnosis_report(result["data"]["result"]))
+    if result["data"].get("saved"):
+        print(f"\nSaved diagnostic: {result['data']['diagnostic_id']}")
+
+
+def cmd_deconstruct(args):
+    """Deconstruct fuzzy business concepts."""
+    from ode.heuristics.dbs import format_deconstruction_report
+
+    result = asyncio.run(service.deconstruct_concept(
+        args.text,
+        opp_id=args.opp_id,
+        save=args.save,
+    ))
+    if not result["ok"]:
+        print(result["message"], file=sys.stderr)
+        sys.exit(1)
+    print(format_deconstruction_report(result["data"]["result"]))
+    if result["data"].get("saved"):
+        print(f"\nSaved diagnostic: {result['data']['diagnostic_id']}")
+
+
+def cmd_ai_hardware(args):
+    """Show the DBS-gated AI hardware opportunity workflow."""
+    result = asyncio.run(service.build_ai_hardware_workflow(
+        region=args.region,
+        team=args.team,
+    ))
+    if not result["ok"]:
+        print(result["message"], file=sys.stderr)
+        sys.exit(1)
+    print(result["data"]["formatted"])
+
+
 def cmd_portfolio(args):
     """Show portfolio view."""
     result = asyncio.run(service.get_portfolio())
@@ -249,7 +357,7 @@ def cmd_portfolio(args):
 
 def cmd_compare(args):
     """Compare opportunities."""
-    ids = [i.strip() for i in args.ids.split(",")]
+    ids = split_csv_arg(args.ids) or []
     result = asyncio.run(service.compare_opportunities(ids))
     print(result["data"]["formatted"])
 
@@ -388,6 +496,12 @@ def cmd_insights(args):
         print()
         print(format_reframe_report(d["reframe"]))
 
+    if d.get("dbs"):
+        from ode.heuristics.dbs import format_saved_diagnostic_report
+
+        print()
+        print(format_saved_diagnostic_report(d["dbs"]))
+
 
 def cmd_lens(args):
     """Apply Founder Fit Lens to an opportunity."""
@@ -463,6 +577,11 @@ COMMANDS = {
     "status": cmd_status,
     "sources": cmd_sources,
     "cases": cmd_cases,
+    "dbs": cmd_dbs,
+    "clarify": cmd_clarify,
+    "diagnose": cmd_diagnose,
+    "deconstruct": cmd_deconstruct,
+    "ai-hardware": cmd_ai_hardware,
     "portfolio": cmd_portfolio,
     "compare": cmd_compare,
     "explore": cmd_explore,

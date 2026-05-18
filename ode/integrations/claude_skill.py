@@ -8,9 +8,14 @@ from __future__ import annotations
 
 import asyncio
 import json
-import shlex
 
 from ode import service
+from ode.cli_io import CliInputError
+from ode.service_commands import (
+    is_registered_command,
+    run_registered_command_from_string,
+    split_command_args,
+)
 
 SKILL_DEFINITION = {
     "name": "ode",
@@ -18,18 +23,30 @@ SKILL_DEFINITION = {
     "commands": [
         {"name": "scan", "description": "Scan for trend signals",
          "usage": "/ode scan --keywords 'AI,machine learning'"},
+        {"name": "list", "description": "List opportunities",
+         "usage": "/ode list"},
+        {"name": "sources", "description": "List configured opportunity sources",
+         "usage": "/ode sources --region global"},
+        {"name": "cases", "description": "Analyze revenue-proven cases",
+         "usage": "/ode cases --region china --min-grade B"},
+        {"name": "show", "description": "Show an opportunity",
+         "usage": "/ode show <opp_id>"},
         {"name": "eval", "description": "Evaluate an opportunity",
          "usage": "/ode eval <opp_id> --depth screen"},
         {"name": "report", "description": "Generate an assessment report",
          "usage": "/ode report <opp_id>"},
         {"name": "portfolio", "description": "View opportunity portfolio",
          "usage": "/ode portfolio"},
+        {"name": "compare", "description": "Compare opportunities",
+         "usage": "/ode compare opp-1,opp-2"},
         {"name": "status", "description": "Show ODE status",
          "usage": "/ode status"},
         {"name": "explore", "description": "Open-ended opportunity exploration",
          "usage": "/ode explore --hn-top 10"},
         {"name": "insights", "description": "Generate insights for an opportunity",
          "usage": "/ode insights <opp_id>"},
+        {"name": "lens", "description": "Apply Founder Fit Lens",
+         "usage": "/ode lens <opp_id> --profile examples/profiles/open_founder_profile.json"},
         {"name": "experiment", "description": "Record a prototype iteration",
          "usage": "/ode experiment <opp_id> --version v1 --outcome pass"},
         {"name": "record-actuals", "description": "Record actual financial data",
@@ -42,18 +59,13 @@ SKILL_DEFINITION = {
 
 def _parse_and_dispatch(command: str, args_str: str) -> dict:
     """Parse args using CLI argparse and dispatch to service layer."""
-    from ode.cli import main as _cli_main
-    import argparse
 
-    # Build the same argparse parser as CLI, but intercept instead of executing
-    tokens = shlex.split(args_str) if args_str else []
+    if is_registered_command(command):
+        return run_registered_command_from_string(command, args_str)
+
+    tokens = split_command_args(args_str)
 
     # Map command + args to service calls directly
-    if command == "status":
-        return asyncio.run(service.get_status())
-    if command == "portfolio":
-        return asyncio.run(service.get_portfolio())
-
     if command == "scan":
         kwargs = {}
         i = 0
@@ -109,10 +121,6 @@ def _parse_and_dispatch(command: str, args_str: str) -> dict:
             else:
                 i += 1
         return asyncio.run(service.generate_report(opp_id, **kwargs))
-
-    if command == "insights":
-        opp_id = tokens[0] if tokens else ""
-        return asyncio.run(service.get_insights(opp_id))
 
     if command == "explore":
         kwargs = {}
@@ -184,6 +192,8 @@ def handle_skill_command(command: str, args: str = "") -> str:
     """
     try:
         result = _parse_and_dispatch(command, args)
+    except CliInputError as e:
+        result = {"ok": False, "data": {}, "message": str(e)}
     except Exception as e:
         result = {"ok": False, "data": {}, "message": f"Error: {e}"}
 

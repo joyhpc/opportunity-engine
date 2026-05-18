@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ODE Local Web</title>
+    <link rel="stylesheet" href="/static/styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Opportunity Discovery Engine</p>
+          <h1>Local Web</h1>
+        </div>
+        <div class="status-strip">
+          <span id="health-dot" class="dot pending"></span>
+          <span id="health-text">Connecting</span>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <nav class="sidebar" aria-label="Command groups">
+          <button class="nav-button active" data-panel="overview">Overview</button>
+          <button class="nav-button" data-panel="opportunity">Opportunity</button>
+          <button class="nav-button" data-panel="discovery">Discovery</button>
+          <button class="nav-button" data-panel="dbs">DBS</button>
+          <button class="nav-button" data-panel="advanced">Advanced</button>
+        </nav>
+
+        <section class="panels">
+          <section id="overview" class="panel active" aria-labelledby="overview-title">
+            <div class="panel-heading">
+              <h2 id="overview-title">Overview</h2>
+              <div class="actions">
+                <button data-command="status" data-empty>Refresh Status</button>
+                <button data-command="list" data-empty>List Opportunities</button>
+              </div>
+            </div>
+            <div class="summary-grid">
+              <div class="metric">
+                <span>Total</span>
+                <strong id="metric-total">-</strong>
+              </div>
+              <div class="metric">
+                <span>Active</span>
+                <strong id="metric-active">-</strong>
+              </div>
+              <div class="metric">
+                <span>Killed</span>
+                <strong id="metric-killed">-</strong>
+              </div>
+            </div>
+            <div id="opportunity-list" class="list-table"></div>
+          </section>
+
+          <section id="opportunity" class="panel" aria-labelledby="opportunity-title">
+            <div class="panel-heading">
+              <h2 id="opportunity-title">Opportunity</h2>
+            </div>
+            <div class="tool-grid">
+              <form class="tool" data-command="create">
+                <h3>Create</h3>
+                <label>Name<input name="name" required></label>
+                <label>Domain<input name="domain"></label>
+                <label>Keywords<input name="keywords" data-csv placeholder="ai, hardware, workflow"></label>
+                <label>Description<textarea name="description" rows="3"></textarea></label>
+                <label>Custom ID<input name="id"></label>
+                <button type="submit">Create</button>
+              </form>
+
+              <form class="tool" data-command="show">
+                <h3>Show</h3>
+                <label>Opportunity ID or Name<input name="opp_id" required></label>
+                <button type="submit">Show</button>
+              </form>
+
+              <form class="tool" data-command="scan">
+                <h3>Scan</h3>
+                <label>Opportunity ID<input name="opp_id"></label>
+                <label>Name<input name="name"></label>
+                <label>Keywords<input name="keywords" data-csv></label>
+                <label>Domain<input name="domain"></label>
+                <label>HN Top<input name="hn_top" type="number" min="0" value="0" data-int></label>
+                <label>Reddit<input name="reddit" data-csv></label>
+                <button type="submit">Scan</button>
+              </form>
+
+              <form class="tool" data-command="eval">
+                <h3>Evaluate</h3>
+                <label>Opportunity ID or Name<input name="opp_id" required></label>
+                <label>Depth<select name="depth"><option value="screen">screen</option><option value="analyze">analyze</option></select></label>
+                <label>TAM<input name="tam" type="number" step="0.01" data-float></label>
+                <label>ARPU<input name="arpu" type="number" step="0.01" data-float></label>
+                <label>Scores JSON<textarea name="scores" rows="4" data-json placeholder="{&quot;tam_size&quot;: 8, &quot;growth&quot;: 7}"></textarea></label>
+                <button type="submit">Evaluate</button>
+              </form>
+
+              <form class="tool" data-command="report">
+                <h3>Report</h3>
+                <label>Opportunity ID or Name<input name="opp_id" required></label>
+                <label>Stage<input name="stage" value="screen"></label>
+                <button type="submit">Generate</button>
+              </form>
+            </div>
+          </section>
+
+          <section id="discovery" class="panel" aria-labelledby="discovery-title">
+            <div class="panel-heading">
+              <h2 id="discovery-title">Discovery</h2>
+            </div>
+            <div class="tool-grid">
+              <form class="tool" data-command="sources">
+                <h3>Sources</h3>
+                <label>Status<select name="status"><option value="">Any</option><option>active</option><option>optional</option><option>utility</option><option>manual</option><option>planned</option></select></label>
+                <label>Region<select name="region"><option value="">Any</option><option>global</option><option>china</option></select></label>
+                <button type="submit">List Sources</button>
+              </form>
+
+              <form class="tool" data-command="cases">
+                <h3>Cases</h3>
+                <label>Path<input name="path"></label>
+                <label>Region<select name="region"><option value="">Any</option><option>global</option><option>china</option></select></label>
+                <label>Min Grade<select name="min_grade"><option value="">Any</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option></select></label>
+                <label>Top<input name="top" type="number" min="0" data-int></label>
+                <button type="submit">Analyze</button>
+              </form>
+
+              <form class="tool" data-command="explore">
+                <h3>Explore</h3>
+                <label>HN Top<input name="hn_top" type="number" min="0" value="30" data-int></label>
+                <label>Reddit<input name="reddit" data-csv></label>
+                <label>Keywords<input name="keywords" data-csv></label>
+                <button type="submit">Explore</button>
+              </form>
+
+              <form class="tool" data-command="pain">
+                <h3>Pain</h3>
+                <label>HN Top<input name="hn_top" type="number" min="0" value="50" data-int></label>
+                <label>Reddit<input name="reddit" data-csv></label>
+                <label>Keywords<input name="keywords" data-csv></label>
+                <label>Min Grade<select name="min_grade"><option>C</option><option>D</option><option selected>E</option></select></label>
+                <label>Limit<input name="limit" type="number" min="1" value="20" data-int></label>
+                <label class="checkbox"><input type="checkbox" name="product_hunt" checked> Product Hunt</label>
+                <button type="submit">Listen</button>
+              </form>
+            </div>
+          </section>
+
+          <section id="dbs" class="panel" aria-labelledby="dbs-title">
+            <div class="panel-heading">
+              <h2 id="dbs-title">DBS</h2>
+            </div>
+            <div class="tool-grid">
+              <form class="tool wide" data-command="dbs">
+                <h3>Session</h3>
+                <label>Text<textarea name="text" rows="5" required></textarea></label>
+                <label>Opportunity ID<input name="opp_id"></label>
+                <label>Facts JSON<textarea name="facts_json" rows="4" data-json></textarea></label>
+                <label class="checkbox"><input type="checkbox" name="save"> Save</label>
+                <button type="submit">Run DBS</button>
+              </form>
+
+              <form class="tool" data-command="clarify">
+                <h3>Clarify</h3>
+                <label>Text<textarea name="text" rows="4" required></textarea></label>
+                <label>Opportunity ID<input name="opp_id"></label>
+                <label class="checkbox"><input type="checkbox" name="save"> Save</label>
+                <button type="submit">Clarify</button>
+              </form>
+
+              <form class="tool" data-command="ai-hardware">
+                <h3>AI Hardware</h3>
+                <label>Region<input name="region" value="shenzhen"></label>
+                <label>Team<input name="team" value="solo_or_2_3_person_team"></label>
+                <button type="submit">Build Workflow</button>
+              </form>
+            </div>
+          </section>
+
+          <section id="advanced" class="panel" aria-labelledby="advanced-title">
+            <div class="panel-heading">
+              <h2 id="advanced-title">Advanced</h2>
+            </div>
+            <form id="advanced-runner" class="tool wide">
+              <label>Command<select id="command-select" name="command"></select></label>
+              <label>Params JSON<textarea id="params-json" rows="12">{}</textarea></label>
+              <button type="submit">Run</button>
+            </form>
+          </section>
+        </section>
+
+        <aside class="result-pane" aria-live="polite">
+          <div class="panel-heading">
+            <h2>Result</h2>
+            <button id="clear-result" type="button">Clear</button>
+          </div>
+          <p id="result-message" class="message"></p>
+          <pre id="result-text" class="text-output"></pre>
+          <pre id="result-json" class="json-output">{}</pre>
+        </aside>
+      </main>
+    </div>
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>
+

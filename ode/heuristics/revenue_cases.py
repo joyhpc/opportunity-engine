@@ -7,12 +7,12 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
+from ode.core.constants import EVIDENCE_GRADE_STRENGTH as GRADE_STRENGTH
+from ode.heuristics.dbs import copyability_label, score_copyability
 from ode.heuristics.fit_lens import FounderProfile, default_profile
 
 
 DEFAULT_CASES_PATH = Path(__file__).resolve().parents[2] / "examples" / "revenue_cases" / "seed_cases.json"
-
-GRADE_STRENGTH = {"A": 5, "B": 4, "C": 3, "D": 2, "E": 1}
 GRADE_BASE_CONFIDENCE = {"A": 92, "B": 78, "C": 62, "D": 40, "E": 18}
 ENTRY_SWEET_SPOT_GRADES = {"B", "C"}
 QUIET_MONEY_EVIDENCE_TYPES = {"signed_contract", "payment_receipt"}
@@ -97,6 +97,7 @@ class RevenueCase:
     evidence: list[RevenueEvidence] = field(default_factory=list)
     fit_tags: list[str] = field(default_factory=list)
     risk_flags: list[str] = field(default_factory=list)
+    archetype: str = ""
     notes: str = ""
     published_at: str = ""
 
@@ -121,6 +122,7 @@ class RevenueCase:
             evidence=evidence,
             fit_tags=[str(item) for item in data.get("fit_tags", [])],
             risk_flags=[str(item) for item in data.get("risk_flags", [])],
+            archetype=str(data.get("archetype", "")).strip(),
             notes=str(data.get("notes", "")).strip(),
             published_at=str(data.get("published_at", "")).strip(),
         )
@@ -142,9 +144,12 @@ class RevenueCaseAnalysis:
     case_role: str
     suitability: str
     revenue_quality: str
+    archetype: str
+    evidence_independence: str
     red_flags: list[str]
     verification_steps: list[str]
     next_actions: list[str]
+    dbs_copyability: dict[str, Any] = field(default_factory=dict)
     protected_as_watchlist: bool = False
 
     def to_dict(self) -> dict[str, Any]:
@@ -174,6 +179,7 @@ def analyze_revenue_case(
     founder = profile if isinstance(profile, FounderProfile) else FounderProfile.from_dict(profile)
 
     evidence_grade, red_flags = grade_revenue_evidence(revenue_case)
+    evidence_independence = classify_evidence_independence(revenue_case)
     confidence = _confidence(revenue_case, evidence_grade, red_flags)
     founder_fit = _founder_fit(revenue_case, founder)
     entry_fit = _entry_fit(revenue_case, founder, evidence_grade)
@@ -197,6 +203,19 @@ def analyze_revenue_case(
         revenue_quality=revenue_quality,
         protected_as_watchlist=protected,
     )
+    dbs_copyability = score_copyability(
+        revenue_case,
+        profile=founder,
+        analysis={
+            "evidence_grade": evidence_grade,
+            "confidence": confidence,
+            "founder_fit": founder_fit,
+            "entry_fit": entry_fit,
+            "quiet_money_score": quiet_money_score,
+            "revenue_quality": revenue_quality,
+            "evidence_independence": evidence_independence,
+        },
+    ).to_dict()
 
     return RevenueCaseAnalysis(
         case=revenue_case,
@@ -208,9 +227,12 @@ def analyze_revenue_case(
         case_role=case_role,
         suitability=suitability,
         revenue_quality=revenue_quality,
+        archetype=revenue_case.archetype or _infer_archetype(revenue_case, case_role, suitability),
+        evidence_independence=evidence_independence,
         red_flags=red_flags,
         verification_steps=_verification_steps(revenue_case, evidence_grade, revenue_quality, red_flags),
         next_actions=_next_actions(suitability, evidence_grade, revenue_quality, case_role),
+        dbs_copyability=dbs_copyability,
         protected_as_watchlist=protected,
     )
 
@@ -299,19 +321,39 @@ def grade_revenue_evidence(case: RevenueCase) -> tuple[str, list[str]]:
     return grade, red_flags
 
 
+def classify_evidence_independence(case: RevenueCase) -> str:
+    """Classify whether evidence is independently verifiable or PR-derived."""
+
+    evidence_types = {item.type for item in case.evidence}
+    source_names = {item.source_name.lower() for item in case.evidence if item.source_name}
+
+    if evidence_types & {"signed_contract", "payment_receipt", "audited_financial", "public_filing", "exchange_disclosure"}:
+        return "hard_independent"
+    if "company_formal_disclosure" in evidence_types and len(source_names) >= 2:
+        return "formal_independent"
+    if "company_formal_disclosure" in evidence_types:
+        return "single_ultimate"
+    if "company_pr" in evidence_types:
+        return "single_ultimate"
+    if evidence_types and evidence_types <= {"independent_media", "founder_interview", "investor_article", "analyst_estimate", "data_platform_estimate", "media_estimate"}:
+        return "media_only"
+    return "single_ultimate"
+
+
 def format_revenue_case_report(analyses: list[RevenueCaseAnalysis]) -> str:
     """Format ranked case analysis for terminal output."""
 
     lines = [
         "# Revenue Case Analysis",
         "",
-        "| Rank | Case | Region | Grade | Confidence | Founder Fit | Entry Fit | Quiet Money | Role | Suitability |",
-        "|------|------|--------|-------|------------|-------------|-----------|-------------|------|-------------|",
+        "| Rank | Case | Region | Grade | Independence | Copyability | Confidence | Founder Fit | Entry Fit | Quiet Money | Role | Suitability |",
+        "|------|------|--------|-------|--------------|-------------|------------|-------------|-----------|-------------|------|-------------|",
     ]
     for index, item in enumerate(analyses, 1):
         case = item.case
         lines.append(
             f"| {index} | {case.name} | {case.region} | {item.evidence_grade} | "
+            f"{item.evidence_independence} | {copyability_label(item.dbs_copyability)} | "
             f"{item.confidence:.1f} | {item.founder_fit:.1f} | {item.entry_fit:.1f} | "
             f"{item.quiet_money_score:.1f} | "
             f"{item.case_role} | {item.suitability} |"
@@ -325,12 +367,19 @@ def format_revenue_case_report(analyses: list[RevenueCaseAnalysis]) -> str:
             f"Claim: {case.claim}",
             f"Metric: {case.metric_type} {case.amount or ''} {case.currency} {case.period}".strip(),
             f"Revenue quality: {item.revenue_quality}",
+            f"Archetype: {item.archetype}",
+            f"Evidence independence: {item.evidence_independence}",
+            f"DBS copyability: {copyability_label(item.dbs_copyability)}",
             f"Evidence grade: {item.evidence_grade}",
             f"Entry fit: {item.entry_fit:.1f}",
             f"Quiet money score: {item.quiet_money_score:.1f}",
             f"Role: {item.case_role}",
             f"Suitability: {item.suitability}",
         ])
+        copyability = item.dbs_copyability or {}
+        if copyability.get("blockers"):
+            lines.append("Copyability blockers:")
+            lines.extend([f"- {flag}" for flag in copyability["blockers"]])
         if item.red_flags:
             lines.append("Red flags:")
             lines.extend([f"- {flag}" for flag in item.red_flags])
@@ -707,6 +756,32 @@ def _case_role(
     if confidence >= 42:
         return "watchlist"
     return "weak_signal"
+
+
+def _infer_archetype(case: RevenueCase, case_role: str, suitability: str) -> str:
+    evidence_types = {item.type for item in case.evidence}
+    text = " ".join([
+        case.name,
+        case.category,
+        case.claim,
+        case.notes,
+        " ".join(case.fit_tags),
+        " ".join(case.risk_flags),
+    ]).lower()
+
+    if suitability == "Market Map" or case_role == "market_map":
+        return "incumbent_market_map"
+    if evidence_types & {"signed_contract", "payment_receipt"}:
+        if any(term in text for term in {"renewal", "repeat", "retention", "second order"}):
+            return "renewal_repeat_payment"
+        if any(term in text for term in {"indie", "micro", "solo", "bootstrap", "mrr"}):
+            return "indie_micro_saas"
+        return "quiet_b2b_paid_pilot"
+    if case.amount and case.amount >= 100_000_000 and "company_pr" in evidence_types:
+        return "public_pr_mega_arr"
+    if case_role == "quiet_money":
+        return "quiet_money_trace"
+    return "revenue_case"
 
 
 def _stronger_grade(current: str, candidate: str) -> str:

@@ -24,8 +24,31 @@ T = TypeVar("T")
 
 
 def _project_root() -> Path:
-    """Return the ODE project root (~/opportunity-engine)."""
-    return Path(os.environ.get("ODE_ROOT", Path.home() / "opportunity-engine"))
+    """Return the ODE data root.
+
+    Prefer an explicit ``ODE_ROOT``. Otherwise, when the CLI is launched from a
+    checkout, use that checkout so generated data stays with the active repo.
+    Fall back to the historical user-home location for installed-package usage.
+    """
+
+    explicit = os.environ.get("ODE_ROOT")
+    if explicit:
+        return Path(explicit)
+
+    for candidate in (Path.cwd().resolve(), *Path.cwd().resolve().parents):
+        if (
+            (candidate / "pyproject.toml").exists()
+            and (candidate / "ode").is_dir()
+        ):
+            return candidate
+        if (candidate / ".git").exists() and (candidate / "ode").is_dir():
+            return candidate
+
+    package_root = Path(__file__).resolve().parents[2]
+    if (package_root / "pyproject.toml").exists() and (package_root / "ode").is_dir():
+        return package_root
+
+    return Path.home() / "opportunity-engine"
 
 
 def _ensure_dir(path: Path) -> Path:

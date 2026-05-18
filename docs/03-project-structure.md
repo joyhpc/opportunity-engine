@@ -1,126 +1,168 @@
 # Project Structure
 
-> 这个仓库的整理目标：产品代码、导入素材、原型实验、运行产物各归其位。
+This document defines repository ownership. Its goal is to make it obvious which files are production runtime, which files are contracts, which files are imported material, and which files are generated or experimental.
 
 ## Top-Level Ownership
 
 ```text
 opportunity-engine/
-├── ode/                 # 正式产品包, CLI/service/engine/runtime code
-├── flows/               # 可声明的业务流程和阶段定义
-├── schemas/             # JSON schema and machine-checkable contracts
-├── sources/             # auditable opportunity discovery source catalog
-├── examples/            # 可复现输入和 golden outputs
-├── imports/             # 外部项目审计素材, not a second active app
-├── prototypes/          # 原型和实验代码, not imported by runtime
-├── docs/                # 人读文档和设计说明
-├── tests/               # pytest suite
-├── tools/               # repo maintenance and validation scripts
-├── requirements.txt     # runtime/test dependency list used by CI
-└── pyproject.toml       # package metadata, CLI entrypoint, pytest defaults
+  ode/                 active runtime package
+  flows/               declarative business-flow definitions
+  schemas/             machine-checkable JSON contracts
+  sources/             auditable opportunity source catalog
+  examples/            reproducible inputs and golden outputs
+  imports/             audited external or historical source material
+  prototypes/          experiments; not imported by runtime
+  docs/                human-readable docs, templates, generated research artifacts
+  tests/               pytest suite
+  tools/               repository maintenance and validation scripts
+  web/                 optional local browser UI; separate dependencies
+  requirements.txt     runtime dependency list
+  pyproject.toml       package metadata, script entry, pytest defaults
 ```
 
-## Runtime Package Layers
+## Runtime Package
 
 ```text
 ode/
-├── cli.py               # 命令行入口: parse args and dispatch
-├── cli_parser.py        # argparse command definitions
-├── cli_handlers.py      # terminal text handlers over service.py
-├── cli_json.py          # raw JSON service output mode
-├── service.py           # surface-neutral async facade over ode/services/
-├── services/            # domain service implementations behind the facade
-├── core/                # dataclasses, constants, YAML store
-├── engine/              # pipeline DAG, gates, async workers, portfolio logic
-├── heuristics/          # explore/bridge/reframe/synthesize, optional reasoning
-├── tools/               # domain calculators, scanners, report generation
-├── data/                # cache and knowledge infrastructure adapters
-├── imports/             # adapters from imported assets into ODE contracts
-├── integrations/        # Claude Skill, MCP, project-tracker bridges
-├── api/                 # reserved REST surface package; no empty stub module
-└── web/                 # reserved dashboard package; no empty stub module
+  cli.py               thin CLI entry point
+  cli_parser.py        argparse command definitions
+  cli_handlers.py      human-readable CLI handlers
+  cli_json.py          raw JSON output mode
+  cli_io.py            CLI input parsing helpers
+  service.py           public async facade over ode/services/
+  service_commands.py  shared command registry for CLI JSON, Skill, MCP, future API
+  services/            domain service implementations
+  core/                dataclasses, repository, scoring adapter, YAML store, artifacts
+  engine/              DAG, gates, workers, portfolio logic
+  heuristics/          discovery, scoring bridge, DBS, warnings, fit lens, synthesis
+  tools/               source adapters, scanners, scoring, sizing, financials, reports
+  data/                cache and knowledge infrastructure adapters
+  imports/             adapters from top-level imported material into ODE contracts
+  integrations/        Claude Skill, MCP, project-tracker bridge
+  api/                 reserved package only; no server module
+  web/                 reserved package only; no dashboard module
 ```
 
-The intended dependency direction is:
+## Dependency Direction
+
+Allowed direction:
 
 ```text
-CLI/API/Skill/Web
-    -> parser/handler adapters
-        -> service
-        -> engine + heuristics
-            -> core + tools + data
-                -> external libraries
+access surfaces
+  -> service_commands
+  -> service facade
+  -> services
+  -> engine / heuristics / tools
+  -> core / data
+  -> external libraries
 ```
 
-`ode/heuristics/fit_lens.py` is the soft personalization layer. It ranks an
-opportunity with `Opportunity Score`, `Founder Fit`, and `Discovery Value`, then
-classifies it as `Build Now`, `Validate Soon`, `Watch`, `Research`, or `Ignore`.
-It should not mutate or kill opportunities.
+Rules:
 
-`ode/heuristics/revenue_cases.py` is the revenue-case verification layer. It
-grades proof from A to E, separates revenue from funding/traffic/GMV, and
-returns fit-aware next actions without mutating opportunities.
+1. `ode/service.py` is the compatibility facade. Do not put large new business logic there.
+2. Access surfaces should not call store functions, workers, or heuristics directly when a service function exists.
+3. CLI text handlers may format output, but should not own business behavior.
+4. JSON mode, Skill, MCP, and any future API should consume `ode/service_commands.py`.
+5. Runtime code must not import top-level `imports/` or `prototypes/`.
+6. `ode/imports/` may read top-level imported material and convert it into ODE contracts.
+7. `ode/api/` and `ode/web/` should remain reserved packages. Optional browser UI code belongs in top-level `web/` and must call ODE through `ode/service_commands.py`.
 
-`ode/imports/` is an adapter boundary. It may read from top-level `imports/`,
-but normal engine modules should not directly depend on imported repository
-material.
-
-## Boundary Rules
-
-1. Active product behavior lives under `ode/`.
-2. `imports/` stores audited third-party or legacy source material. Treat it as input data unless code is explicitly promoted into `ode/`.
-3. `prototypes/` is allowed to be messy while exploring, but runtime code and tests must not import from it.
-4. `examples/` and `schemas/` define reproducible contracts. Golden files should change only with intentional contract updates.
-5. Generated user data belongs under `data/` and remains ignored by Git.
-6. Python caches, pytest caches, local IDE folders, and prototype outputs stay out of version control.
-7. New user-facing behavior should enter through `service.py` first, then be exposed by CLI/API/MCP as thin surfaces.
-8. Personal fit is a lens, not an early hard filter. High-discovery wildcard opportunities should remain visible.
-9. Revenue cases are reference material, not opportunities. They should become opportunities only after evidence grading and fit analysis.
-10. Generated reports, renders, plans, and validation artifacts need a pre-write governance decision. Use `ode.core.artifacts.plan_artifact_write` to avoid overwriting user-authored files or duplicating confusing artifacts.
-
-## Current Cleanup Inventory
+## Active Boundaries
 
 | Area | Current State | Decision |
-|------|---------------|----------|
-| `ode/` | Main product package with clear subpackages | Keep as active runtime root |
-| `imports/opportunity-detector/` | Audited source material from legacy repo | Keep isolated; access through `ode/imports/detector_integration.py` |
-| `prototypes/storybook/` | Large prototype scripts and product notes | Keep out of runtime; prefer `pipeline_v2.py` for structured tool_use experiments; keep `pipeline.py` as deprecated history only |
-| `ode/integrations/mcp_server.py` | MCP access surface | Keep; registers read-only service commands as MCP tools |
-| `ode/api/`, `ode/web/` | Reserved access-surface packages | Keep directories only; do not ship empty placeholder modules |
-| `.pytest_cache/`, `__pycache__/` | Local runtime artifacts | Ignore and remove locally when cleaning |
-| Docs test count | README/navigation drifted from test reality | Keep synced to `python -m pytest` result |
+|---|---|---|
+| `ode/` | Main product package. | Active runtime root. |
+| `ode/services/` | Split service implementations behind `ode/service.py`. | Put service behavior here. |
+| `ode/service_commands.py` | Registry covers parser commands and labels read-only commands. | Use for machine/agent-facing surfaces. |
+| `ode/api/`, `ode/web/` | Packages exist, server stubs were removed. | Keep reserved; do not add empty placeholder modules. |
+| `web/` | Optional local browser UI with separate dependencies and default-collected bridge tests. | Keep thin; do not import stores, workers, heuristics, tools, or service implementation modules directly. |
+| `imports/opportunity-detector/` | Audited legacy/source material. | Keep isolated; use `ode/imports/detector_integration.py`. |
+| `prototypes/storybook/` | Experiment and product-plan area. | Keep out of runtime. |
+| `data/` | Runtime state. | Ignored by Git. |
+| `docs/rendered_*`, `docs/assets/*` | Generated/research artifacts. | Treat as governed outputs, not architecture truth. |
 
-## Refactor Roadmap
+## Data And Generated Files
 
-### Phase 0 - Repository Hygiene
+Runtime state belongs under:
 
-- Add project metadata and pytest defaults in `pyproject.toml`.
-- Add editor rules for UTF-8/LF consistency.
-- Clean ignored runtime artifacts locally.
-- Keep README, navigation, and structure docs synchronized.
+```text
+data/
+  opportunities/
+  signals/
+  competitors/
+  evidence/
+  alerts/
+  reports/
+  cache.db
+```
 
-### Phase 1 - Surface Separation
+These paths are ignored by Git. Generated reports or rendered files outside `data/` need a write plan before creation or overwrite:
 
-- Split CLI parser construction from command handlers when command count grows again.
-- Keep `service.py` as the single API used by CLI, MCP, API, and Claude Skill.
-- Add tests for JSON mode and error formatting before touching CLI internals.
-- Status: first pass complete. `ode/cli.py` is now a thin entrypoint and
-  behavior is covered by `tests/test_cli_surface.py`.
-- Status: service implementation is split into `ode/services/*`; `ode/service.py`
-  remains the compatibility facade for existing surfaces.
+```python
+from ode.core.artifacts import plan_artifact_write
+```
 
-### Phase 2 - Import Promotion
+`plan_artifact_write` can return:
 
-- Convert any useful `imports/opportunity-detector` tool into a tested `ode/tools/` module.
-- Preserve the original imported file until parity tests pass.
-- Update `examples/import_integration/*.golden.json` only through `tools/validate_import_integration.py --write`.
+- `create`
+- `update_generated`
+- `version`
+- `conflict`
+- `blocked`
 
-### Phase 3 - Access Surfaces
+Use it when producing shareable docs, maps, PDFs, validation plans, or rendered artifacts that could collide with user-authored files.
 
-- MCP is implemented as a thin adapter over the shared service-command registry.
-- API/Web are reserved packages only until contract tests and dependency choices exist.
-- Do not duplicate scoring, gate, or persistence logic in access layers.
-- Add contract tests before exposing new surfaces.
+## Import Promotion Rule
+
+Top-level imported material is not automatically production code.
+
+Promotion path:
+
+1. Identify the useful source file under `imports/`.
+2. Build or adapt a tested equivalent under `ode/`.
+3. Add tests for the ODE module.
+4. Keep the original import material for audit history.
+5. If the import contract changes, update the golden output via:
+
+```bash
+python tools/validate_import_integration.py --write
+```
+
+Normal runtime modules should never reach directly into `imports/opportunity-detector`.
+
+## Prototype Rule
+
+`prototypes/` can be messy. It is a place for experiments, not a dependency root.
+
+Before prototype code becomes runtime:
+
+1. Move the minimal behavior into `ode/`.
+2. Add tests under `tests/`.
+3. Update docs only after the runtime boundary exists.
+
+## Documentation Rule
+
+Authoritative docs:
+
+- `README.md`
+- `ARCHITECTURE.md`
+- `docs/00-navigation.md`
+- this file
+- `docs/04-data-sources.md` for source registry behavior
+
+Research artifacts and generated reports are not architecture truth. If they contain old wording, preserve them as artifacts unless the user asks for a content revision.
+
+## Cleanup Inventory
+
+| Item | Policy |
+|---|---|
+| `__pycache__/`, `.pytest_cache/`, `*.pyc` | Never track. |
+| `data/` entity and report files | Local runtime state; ignored. |
+| `.codex_tmp/` | Local working scratch; should not become product state. |
+| Office temp files such as `~$*.docx` | Local editor artifacts; should not be tracked. |
+| Rendered PDFs/images | Keep only when they are intentional review artifacts. |
+| Source diagrams under `docs/assets/` | Keep only with clear document ownership. |
 
 ## Verification Commands
 
@@ -128,5 +170,24 @@ material.
 python tools/check_environment.py
 python tools/validate_import_integration.py
 python -m pytest
-python -m ode status
+python -m ode --json status
 ```
+
+Optional local Web verification after installing `web/requirements.txt`:
+
+```bash
+python tools/check_web_app.py
+```
+
+Boundary tests to check after structure changes:
+
+```bash
+python -m pytest tests/test_project_structure.py tests/test_service_boundaries.py tests/test_cli_surface.py
+```
+
+## Current Deferred Work
+
+- Persistent run ledger is not implemented.
+- Packaged API/Web surfaces under `ode/` are not implemented.
+- MCP write tools are not implemented.
+- Later pipeline stages exist in declarations but do not have dedicated gate evaluators.

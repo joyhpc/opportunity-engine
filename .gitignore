@@ -13,6 +13,7 @@ data/evidence/
 data/alerts/
 data/reports/
 data/cache.db
+data/cache.db*
 
 # IDE
 .vscode/

@@ -1,0 +1,317 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2200" height="1380" viewBox="0 0 2200 1380" role="img" aria-label="Opportunity matrix">
+    <defs>
+      <style>
+        .title { font-family: Arial, sans-serif; font-size: 50px; font-weight: 800; fill: #17242d; }
+        .subtitle { font-family: Arial, sans-serif; font-size: 22px; fill: #445b68; }
+        .axis { font-family: Arial, sans-serif; font-size: 23px; font-weight: 700; fill: #344955; }
+        .quad { font-family: Arial, sans-serif; font-size: 28px; font-weight: 800; fill: #2d424c; opacity: 0.86; }
+        .legendTitle { font-family: Arial, sans-serif; font-size: 31px; font-weight: 800; fill: #17242d; }
+        .legendText { font-family: Arial, sans-serif; font-size: 22px; fill: #263b45; }
+        .pointText { font-family: Arial, sans-serif; font-size: 15px; font-weight: 800; fill: #ffffff; }
+        .note { font-family: Arial, sans-serif; font-size: 20px; fill: #5e737d; }
+      </style>
+    </defs>
+    <rect width="2200" height="1380" fill="#f7fbff"/>
+    <text x="75" y="72" class="title">Opportunity Matrix: Time to Payment x Risk Exposure</text>
+    <text x="78" y="112" class="subtitle">Dense map of 28 candidate opportunities. Numbers match the legend.</text>
+
+    <rect x="110" y="150" width="630" height="480" fill="#fff7dd" stroke="#e2d8b5"/>
+    <rect x="740" y="150" width="630" height="480" fill="#fff0eb" stroke="#e2c1b8"/>
+    <rect x="110" y="630" width="630" height="480" fill="#eef4ff" stroke="#cbd7f2"/>
+    <rect x="740" y="630" width="630" height="480" fill="#e9f9ef" stroke="#c2e7cf"/>
+    <line x1="110" y1="630" x2="1370" y2="630" stroke="#7b8d96" stroke-width="3"/>
+    <line x1="740" y1="150" x2="740" y2="1110" stroke="#7b8d96" stroke-width="3"/>
+    <rect x="110" y="150" width="1260" height="960" fill="none" stroke="#37566b" stroke-width="5"/>
+
+    <text x="152" y="208" class="quad">High risk, slow payment</text>
+    <text x="782" y="208" class="quad">Fast but needs boundaries</text>
+    <text x="152" y="1072" class="quad">Slow-burn watch zone</text>
+    <text x="782" y="1072" class="quad">Priority validation zone</text>
+
+    <text x="740" y="1185" text-anchor="middle" class="axis">Payment speed: slow / heavy sales -> fast / light sales</text>
+    <text x="38" y="630" text-anchor="middle" transform="rotate(-90 38 630)" class="axis">Risk exposure: low boundary risk -> high liability / delivery risk</text>
+
+    
+        <g>
+          <circle cx="1143.2" cy="841.2" r="18" fill="#28a25b" stroke="#fff" stroke-width="4"/>
+          <text x="1143.2" y="847.2" text-anchor="middle" class="pointText">1</text>
+        </g>
+
+        <g>
+          <circle cx="1092.8" cy="879.6" r="18" fill="#28a25b" stroke="#fff" stroke-width="4"/>
+          <text x="1092.8" y="885.6" text-anchor="middle" class="pointText">2</text>
+        </g>
+
+        <g>
+          <circle cx="1042.4" cy="822.0" r="18" fill="#28a25b" stroke="#fff" stroke-width="4"/>
+          <text x="1042.4" y="828.0" text-anchor="middle" class="pointText">3</text>
+        </g>
+
+        <g>
+          <circle cx="992.0" cy="745.2" r="18" fill="#28a25b" stroke="#fff" stroke-width="4"/>
+          <text x="992.0" y="751.2" text-anchor="middle" class="pointText">4</text>
+        </g>
+
+        <g>
+          <circle cx="1029.8" cy="822.0" r="18" fill="#28a25b" stroke="#fff" stroke-width="4"/>
+          <text x="1029.8" y="828.0" text-anchor="middle" class="pointText">5</text>
+        </g>
+
+        <g>
+          <circle cx="966.8" cy="802.8" r="18" fill="#28a25b" stroke="#fff" stroke-width="4"/>
+          <text x="966.8" y="808.8" text-anchor="middle" class="pointText">6</text>
+        </g>
+
+        <g>
+          <circle cx="1017.2" cy="860.4" r="18" fill="#28a25b" stroke="#fff" stroke-width="4"/>
+          <text x="1017.2" y="866.4" text-anchor="middle" class="pointText">7</text>
+        </g>
+
+        <g>
+          <circle cx="878.6" cy="687.6" r="18" fill="#c58a12" stroke="#fff" stroke-width="4"/>
+          <text x="878.6" y="693.6" text-anchor="middle" class="pointText">8</text>
+        </g>
+
+        <g>
+          <circle cx="1067.6" cy="937.2" r="18" fill="#28a25b" stroke="#fff" stroke-width="4"/>
+          <text x="1067.6" y="943.2" text-anchor="middle" class="pointText">9</text>
+        </g>
+
+        <g>
+          <circle cx="916.4" cy="706.8" r="18" fill="#c58a12" stroke="#fff" stroke-width="4"/>
+          <text x="916.4" y="712.8" text-anchor="middle" class="pointText">10</text>
+        </g>
+
+        <g>
+          <circle cx="1017.2" cy="918.0" r="18" fill="#28a25b" stroke="#fff" stroke-width="4"/>
+          <text x="1017.2" y="924.0" text-anchor="middle" class="pointText">11</text>
+        </g>
+
+        <g>
+          <circle cx="891.2" cy="649.2" r="18" fill="#c58a12" stroke="#fff" stroke-width="4"/>
+          <text x="891.2" y="655.2" text-anchor="middle" class="pointText">12</text>
+        </g>
+
+        <g>
+          <circle cx="840.8" cy="687.6" r="18" fill="#c58a12" stroke="#fff" stroke-width="4"/>
+          <text x="840.8" y="693.6" text-anchor="middle" class="pointText">13</text>
+        </g>
+
+        <g>
+          <circle cx="740.0" cy="572.4" r="18" fill="#5c79d6" stroke="#fff" stroke-width="4"/>
+          <text x="740.0" y="578.4" text-anchor="middle" class="pointText">14</text>
+        </g>
+
+        <g>
+          <circle cx="714.8" cy="582.0" r="18" fill="#c58a12" stroke="#fff" stroke-width="4"/>
+          <text x="714.8" y="588.0" text-anchor="middle" class="pointText">15</text>
+        </g>
+
+        <g>
+          <circle cx="689.6" cy="610.8" r="18" fill="#c58a12" stroke="#fff" stroke-width="4"/>
+          <text x="689.6" y="616.8" text-anchor="middle" class="pointText">16</text>
+        </g>
+
+        <g>
+          <circle cx="664.4" cy="706.8" r="18" fill="#5c79d6" stroke="#fff" stroke-width="4"/>
+          <text x="664.4" y="712.8" text-anchor="middle" class="pointText">17</text>
+        </g>
+
+        <g>
+          <circle cx="639.2" cy="678.0" r="18" fill="#c58a12" stroke="#fff" stroke-width="4"/>
+          <text x="639.2" y="684.0" text-anchor="middle" class="pointText">18</text>
+        </g>
+
+        <g>
+          <circle cx="689.6" cy="745.2" r="18" fill="#c58a12" stroke="#fff" stroke-width="4"/>
+          <text x="689.6" y="751.2" text-anchor="middle" class="pointText">19</text>
+        </g>
+
+        <g>
+          <circle cx="714.8" cy="726.0" r="18" fill="#5c79d6" stroke="#fff" stroke-width="4"/>
+          <text x="714.8" y="732.0" text-anchor="middle" class="pointText">20</text>
+        </g>
+
+        <g>
+          <circle cx="588.8" cy="514.8" r="18" fill="#5c79d6" stroke="#fff" stroke-width="4"/>
+          <text x="588.8" y="520.8" text-anchor="middle" class="pointText">21</text>
+        </g>
+
+        <g>
+          <circle cx="639.2" cy="553.2" r="18" fill="#5c79d6" stroke="#fff" stroke-width="4"/>
+          <text x="639.2" y="559.2" text-anchor="middle" class="pointText">22</text>
+        </g>
+
+        <g>
+          <circle cx="677.0" cy="764.4" r="18" fill="#5c79d6" stroke="#fff" stroke-width="4"/>
+          <text x="677.0" y="770.4" text-anchor="middle" class="pointText">23</text>
+        </g>
+
+        <g>
+          <circle cx="563.6" cy="783.6" r="18" fill="#5c79d6" stroke="#fff" stroke-width="4"/>
+          <text x="563.6" y="789.6" text-anchor="middle" class="pointText">24</text>
+        </g>
+
+        <g>
+          <circle cx="614.0" cy="630.0" r="18" fill="#5c79d6" stroke="#fff" stroke-width="4"/>
+          <text x="614.0" y="636.0" text-anchor="middle" class="pointText">25</text>
+        </g>
+
+        <g>
+          <circle cx="488.0" cy="380.4" r="18" fill="#c94134" stroke="#fff" stroke-width="4"/>
+          <text x="488.0" y="386.4" text-anchor="middle" class="pointText">26</text>
+        </g>
+
+        <g>
+          <circle cx="462.8" cy="303.6" r="18" fill="#c94134" stroke="#fff" stroke-width="4"/>
+          <text x="462.8" y="309.6" text-anchor="middle" class="pointText">27</text>
+        </g>
+
+        <g>
+          <circle cx="362.0" cy="246.0" r="18" fill="#c94134" stroke="#fff" stroke-width="4"/>
+          <text x="362.0" y="252.0" text-anchor="middle" class="pointText">28</text>
+        </g>
+
+    <text x="1435" y="112" class="legendTitle">Legend</text>
+    
+        <g>
+          <circle cx="1435" cy="170" r="10" fill="#28a25b"/>
+          <text x="1459" y="176" class="legendText">1. Production Readiness Review</text>
+        </g>
+
+        <g>
+          <circle cx="1435" cy="205" r="10" fill="#28a25b"/>
+          <text x="1459" y="211" class="legendText">2. PCB/Schematic/BOM Review</text>
+        </g>
+
+        <g>
+          <circle cx="1435" cy="240" r="10" fill="#28a25b"/>
+          <text x="1459" y="246" class="legendText">3. DFM/DFT/Test Checklist</text>
+        </g>
+
+        <g>
+          <circle cx="1435" cy="275" r="10" fill="#28a25b"/>
+          <text x="1459" y="281" class="legendText">4. Secure Provisioning Audit</text>
+        </g>
+
+        <g>
+          <circle cx="1435" cy="310" r="10" fill="#28a25b"/>
+          <text x="1459" y="316" class="legendText">5. BOM Risk Report</text>
+        </g>
+
+        <g>
+          <circle cx="1435" cy="345" r="10" fill="#28a25b"/>
+          <text x="1459" y="351" class="legendText">6. Alternate Parts Report</text>
+        </g>
+
+        <g>
+          <circle cx="1435" cy="380" r="10" fill="#28a25b"/>
+          <text x="1459" y="386" class="legendText">7. Supplier Handoff Pack</text>
+        </g>
+
+        <g>
+          <circle cx="1435" cy="415" r="10" fill="#c58a12"/>
+          <text x="1459" y="421" class="legendText">8. Certification Prep Pack</text>
+        </g>
+
+        <g>
+          <circle cx="1435" cy="450" r="10" fill="#28a25b"/>
+          <text x="1459" y="456" class="legendText">9. English Datasheet Pack</text>
+        </g>
+
+        <g>
+          <circle cx="1435" cy="485" r="10" fill="#c58a12"/>
+          <text x="1459" y="491" class="legendText">10. Compliance Readiness Pack</text>
+        </g>
+
+        <g>
+          <circle cx="1435" cy="520" r="10" fill="#28a25b"/>
+          <text x="1459" y="526" class="legendText">11. Sample Follow-up SOP</text>
+        </g>
+
+        <g>
+          <circle cx="1435" cy="555" r="10" fill="#c58a12"/>
+          <text x="1459" y="561" class="legendText">12. Field Service Quote Assistant</text>
+        </g>
+
+        <g>
+          <circle cx="1435" cy="590" r="10" fill="#c58a12"/>
+          <text x="1459" y="596" class="legendText">13. Parts/Warranty Knowledge Base</text>
+        </g>
+
+        <g>
+          <circle cx="1435" cy="625" r="10" fill="#5c79d6"/>
+          <text x="1459" y="631" class="legendText">14. Damage Estimate Pack</text>
+        </g>
+
+        <g>
+          <circle cx="1435" cy="660" r="10" fill="#c58a12"/>
+          <text x="1459" y="666" class="legendText">15. QA Traceability Report</text>
+        </g>
+
+        <g>
+          <circle cx="1435" cy="695" r="10" fill="#c58a12"/>
+          <text x="1459" y="701" class="legendText">16. Video-to-Audit Timeline</text>
+        </g>
+
+        <g>
+          <circle cx="1435" cy="730" r="10" fill="#5c79d6"/>
+          <text x="1459" y="736" class="legendText">17. Shift Handover Reports</text>
+        </g>
+
+        <g>
+          <circle cx="1435" cy="765" r="10" fill="#c58a12"/>
+          <text x="1459" y="771" class="legendText">18. Robot Rental Maintenance OS</text>
+        </g>
+
+        <g>
+          <circle cx="1435" cy="800" r="10" fill="#c58a12"/>
+          <text x="1459" y="806" class="legendText">19. Utilization Monthly Report</text>
+        </g>
+
+        <g>
+          <circle cx="1435" cy="835" r="10" fill="#5c79d6"/>
+          <text x="1459" y="841" class="legendText">20. Operator Handoff Workflow</text>
+        </g>
+
+        <g>
+          <circle cx="1435" cy="870" r="10" fill="#5c79d6"/>
+          <text x="1459" y="876" class="legendText">21. PLC Integration Support</text>
+        </g>
+
+        <g>
+          <circle cx="1435" cy="905" r="10" fill="#5c79d6"/>
+          <text x="1459" y="911" class="legendText">22. Site Survey &amp; Acceptance Pack</text>
+        </g>
+
+        <g>
+          <circle cx="1435" cy="940" r="10" fill="#5c79d6"/>
+          <text x="1459" y="946" class="legendText">23. Deployment Training Kit</text>
+        </g>
+
+        <g>
+          <circle cx="1435" cy="975" r="10" fill="#5c79d6"/>
+          <text x="1459" y="981" class="legendText">24. Replacement Compatibility DB</text>
+        </g>
+
+        <g>
+          <circle cx="1435" cy="1010" r="10" fill="#5c79d6"/>
+          <text x="1459" y="1016" class="legendText">25. Supplier QA Inspection</text>
+        </g>
+
+        <g>
+          <circle cx="1435" cy="1045" r="10" fill="#c94134"/>
+          <text x="1459" y="1051" class="legendText">26. Computer Vision Quality Pilot</text>
+        </g>
+
+        <g>
+          <circle cx="1435" cy="1080" r="10" fill="#c94134"/>
+          <text x="1459" y="1086" class="legendText">27. White-label Hardware Export</text>
+        </g>
+
+        <g>
+          <circle cx="1435" cy="1115" r="10" fill="#c94134"/>
+          <text x="1459" y="1121" class="legendText">28. Self-owned Hardware Product</text>
+        </g>
+    <text x="75" y="1325" class="note">Green = validate now; amber = validate soon; blue = watch/bundle; red = avoid as first move.</text>
+  </svg>

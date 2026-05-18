@@ -158,6 +158,11 @@ class Opportunity:
     # e.g. [{"version": "v1", "description": "...", "cogs": 0.25,
     #         "outcome": "pass"|"fail"|"partial", "metrics": {}, "ts": "..."}]
 
+    # Diagnostic lenses / advisory records
+    diagnostics: list[dict] = field(default_factory=list)
+    # e.g. [{"id": "diag-...", "source": "dbs_lens_v1",
+    #         "type": "business_diagnosis", "created_at": "...", "result": {...}}]
+
     def __post_init__(self):
         if not self.id:
             self.id = _new_id("opp-")

@@ -49,7 +49,7 @@ def listen(
     founder = profile if isinstance(profile, FounderProfile) else FounderProfile.from_dict(profile)
     keywords = keywords or DEFAULT_PROFILE_KEYWORDS
     min_grade = (min_grade or "E").upper()
-    if min_grade not in GRADE_STRENGTH:
+    if min_grade not in VALID_EVIDENCE_GRADES:
         raise ValueError(
             f"Unsupported pain evidence grade '{min_grade}'. "
             f"Use one of: {', '.join(VALID_EVIDENCE_GRADES)}."

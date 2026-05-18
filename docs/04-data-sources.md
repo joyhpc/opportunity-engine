@@ -1,116 +1,119 @@
 # Data Sources
 
-ODE 的机会发现分两层：
+ODE source coverage has two layers:
 
-1. **已接入扫描源**：运行时 worker 真的会调用。
-2. **来源注册表**：把 active、optional、utility、manual、planned 都列出来，避免误以为系统已经在扫全网。
+1. The source registry: everything the project has named, classified, or planned.
+2. Runtime contexts: the much smaller set that code actually calls today.
 
-注册表在 [`sources/opportunity_sources.yaml`](../sources/opportunity_sources.yaml)。
+The registry lives in [`sources/opportunity_sources.yaml`](../sources/opportunity_sources.yaml). Do not infer runtime coverage from registry presence alone.
 
-## Current Runtime Sources
+## Current Registry Snapshot
 
-| Source ID | Status | Contexts | Trigger | What It Captures | Main Bias |
-|-----------|--------|----------|---------|------------------|-----------|
-| `hackernews_topstories` | active | `scan_worker`, `explore`, `pain_listener` | `--hn-top > 0` | HN top stories through Firebase API | technical early adopters |
-| `reddit_hot_rss` | active | `scan_worker`, `explore`, `pain_listener` | `--reddit "sub1,sub2"` | subreddit hot RSS posts | noisy community language |
-| `producthunt_feed` | active | `pain_listener` | `ode pain` with Product Hunt enabled | recent Product Hunt launches from the public Atom feed | solution-side launch bias |
-| `google_trends` | optional | `scan_worker`, `explore` | `--keywords` plus optional `pytrends` dependency | search interest and rising queries | seed-keyword dependent |
+As of this audit pass, the catalog contains 66 entries.
 
-`ode scan` and `ode explore` call HN, Reddit, and optional Trends. `ode pain` calls HN, Reddit, and Product Hunt, then grades signals before ranking founder fit and grouping candidates into validation queues. Runtime dispatch goes through `ode.tools.source_dispatch`, which loads the adapter declared in this registry for the requested context. Source adapters live under `ode.tools.sources`; `ode.tools.trend_scanner` keeps compatibility wrappers and aggregate report/filter behavior.
+| Status | Count | Meaning |
+|---|---:|---|
+| `active` | 3 | Has an adapter and at least one runtime context. |
+| `optional` | 1 | Can run only when optional dependency and seed input exist. |
+| `manual` | 11 | Human-curated local signal path. |
+| `planned` | 50 | Coverage target only; not scanned. |
+| `utility` | 1 | Helper source, not part of scan contexts today. |
 
-## Utility And Manual Sources
+Region labels currently include 41 China entries, 16 global entries, and 9 entries without a region label.
 
-| Source ID | Status | Purpose |
-|-----------|--------|---------|
-| `duckduckgo_instant_answer` | utility | future lightweight evidence lookup; not used by scan workers today |
-| `manual_signal` | manual | curated funding, interview, user, or news signals stored as local `Signal` entities |
+## Runtime Contexts
+
+These contexts are the operational truth.
+
+| Context | Called By | Sources |
+|---|---|---|
+| `scan_worker` | `ode scan` | `hackernews_topstories`, `reddit_hot_rss`, optional `google_trends` |
+| `explore` | `ode explore` | `hackernews_topstories`, `reddit_hot_rss`, optional `google_trends` |
+| `pain_listener` | `ode pain`, `ode daily` | `hackernews_topstories`, `reddit_hot_rss`, `producthunt_feed` |
+
+`producthunt_feed` is active only for pain listening. It is not a `scan_worker` source.
+
+`google_trends` is optional. It requires keywords and the optional Google Trends client path to work.
+
+## Active And Optional Sources
+
+| Source ID | Status | Adapter | Best For | Main Bias |
+|---|---|---|---|---|
+| `hackernews_topstories` | active | `ode.tools.sources.hackernews.scan` | Developer, infrastructure, AI engineering, technical early-adopter demand. | Strong technical bias; weak mainstream consumer coverage. |
+| `reddit_hot_rss` | active | `ode.tools.sources.reddit.scan` | Community pain, user language, early validation topics. | Depends heavily on subreddit choice; noisy. |
+| `producthunt_feed` | active | `ode.tools.sources.producthunt.scan` | Startup launches, indie AI tools, competitor language. | Launch attention is not revenue or primary pain proof. |
+| `google_trends` | optional | `ode.tools.sources.google_trends.scan` | Search-interest timing and keyword expansion. | Seed-keyword dependent; optional dependency may be unavailable. |
+
+## Manual Sources
+
+Manual sources are valid evidence paths when the operator stores auditable notes, URLs, screenshots, or exports as local signals. They are not crawlers.
+
+Examples:
+
+- `manual_signal`
+- `g2_manual`
+- `capterra_manual`
+- `indiehackers_manual`
+- `cn_xiaohongshu_manual`
+- `cn_wechat_public_manual`
+- `cn_wechat_channels_assistant_manual`
+- `cn_baidu_index`
+- `cn_wechat_index`
+
+Manual evidence should include source URL, timestamp or date range, extraction note, and why it matters.
 
 ## Planned Sources
 
-| Source ID | Why It Matters |
-|-----------|----------------|
-| `arxiv_recent` | catches research inflection points before commercial products appear |
-| `github_trending` | catches developer adoption and open-source momentum |
-| `funding_news` | catches capital flow, category formation, and new competitors |
+Planned entries are visibility markers. They prevent the team from forgetting important platforms, but they do not affect scoring until an adapter and tests exist.
 
-Planned sources are intentionally visible but not counted as scanned until an adapter exists and tests pass.
+Examples:
 
-## Mainstream Coverage Map
+- `github_trending`
+- `arxiv_recent`
+- `funding_news`
+- `youtube_data_api_search`
+- `tiktok_research_api`
+- `x_recent_search_api`
+- `meta_ads_library_api`
+- `apple_itunes_search_api`
+- `google_play_developer_reviews`
+- `cn_36kr_newsflash`
+- `cn_v2ex_hot`
+- `cn_zhihu_hot`
+- `cn_weibo_hot_search`
+- `cn_government_procurement`
+- `cn_taobao_open_platform`
+- `cn_douyin_ecommerce_open_api`
+- `cn_wechat_store_api`
 
-Mainstream platforms are covered first as a registry map, then promoted to active scanners only after access, compliance, and tests are clear.
+Promotion rule:
 
-| Area | Registered Sources | Runtime Status |
-|------|--------------------|----------------|
-| Global video/social | `youtube_data_api_search`, `tiktok_research_api`, `instagram_graph_hashtag_api`, `x_recent_search_api` | planned |
-| Global paid demand | `meta_ads_library_api`, `amazon_product_advertising_api`, `linkedin_marketing_api` | planned |
-| Global launches/apps | `producthunt_feed`, `producthunt_graphql`, `apple_itunes_search_api`, `google_play_developer_reviews` | active/planned |
-| Global market intelligence | `crunchbase_paid`, `sensor_tower_paid`, `similarweb_paid`, `g2_manual`, `capterra_manual`, `indiehackers_manual` | planned/manual |
-| China content/social | `cn_douyin_video_search_api`, `cn_kuaishou_open_platform`, `cn_bilibili_ranking`, `cn_weibo_hot_search`, `cn_zhihu_hot`, `cn_xiaohongshu_manual`, `cn_wechat_channels_assistant_manual` | planned/manual |
-| China ecommerce/local | `cn_taobao_open_platform`, `cn_jd_open_platform`, `cn_pdd_open_platform`, `cn_1688_open_platform`, `cn_douyin_ecommerce_open_api`, `cn_kuaishou_ecommerce_open_api`, `cn_meituan_open_platform`, `cn_ele_me_open_platform`, `cn_wechat_store_api`, `cn_xiaohongshu_ark_order_api` | planned |
+1. Add or confirm registry metadata.
+2. Implement an adapter under `ode/tools/sources/` or another explicit tools module.
+3. Add context dispatch tests.
+4. Add failure-mode tests for HTTP errors, malformed responses, and empty results.
+5. Only then mark it `active` and add runtime context.
 
-Coverage rule: a mainstream source can exist in the catalog even when it is not automated. The registry is the truth about coverage; `contexts` is the truth about which entrypoints can call a source, and `used_by_scan_workers` specifically means the `scan_worker` context.
+## Restricted Platforms
 
-## China-Focused Sources
+Xiaohongshu, Douyin, Kuaishou, WeChat Channels, and ecommerce order APIs can be valuable but should not be treated as ordinary public feeds.
 
-这些源先进入注册表，不代表都已经自动扫描。国内平台公开 API 不稳定、登录限制多、平台条款差异大，所以先按可审计目录管理，后续逐个挑选成 adapter。
+Rules:
 
-| Source ID | Status | Signal Type |
-|-----------|--------|-------------|
-| `cn_36kr_newsflash` | planned | startup launches, funding, tech news |
-| `cn_huxiu_articles` | planned | China tech narratives |
-| `cn_tmtpost_news` | planned | platform and enterprise tech news |
-| `cn_cyzone_news` | planned | startup and financing news |
-| `cn_iyiou_industry` | planned | industry digitization |
-| `cn_itjuzi_funding` | planned | funding database, likely paid/manual |
-| `cn_qimingpian_funding` | planned | funding database, likely paid/manual |
-| `cn_qichacha_company` | planned | company and competitor verification |
-| `cn_tianyancha_company` | planned | company and competitor verification |
-| `cn_juejin_hot` | planned | developer/building signals |
-| `cn_oschina_news` | planned | open-source and enterprise software |
-| `cn_v2ex_hot` | planned | indie/developer community pain |
-| `cn_zhihu_hot` | planned | public attention and consumer questions |
-| `cn_weibo_hot_search` | planned | public attention spikes |
-| `cn_bilibili_ranking` | planned | content and youth consumer interest |
-| `cn_gov_policy` | planned | policy tailwinds and regulation |
-| `cn_miit_policy` | planned | industrial internet, AI, software policy |
-| `cn_stats_data` | planned | macro/TAM sanity checks |
-| `cn_government_procurement` | planned | B2G budget-backed demand |
-| `cn_xiaohongshu_manual` | manual | consumer desire and purchase language |
-| `cn_xiaohongshu_ark_order_api` | planned | authorized merchant order/revenue proof |
-| `cn_xiaohongshu_miniapp_platform` | planned | owned Xiaohongshu mini-app funnel signals |
-| `cn_douyin_video_search_api` | planned | approved official Douyin video search signal |
-| `cn_douyin_open_video_data` | planned | authorized owned-account Douyin video metrics |
-| `cn_douyin_ecommerce_open_api` | planned | authorized Douyin shop order/revenue proof |
-| `cn_kuaishou_open_platform` | planned | official Kuaishou short-video/account signals |
-| `cn_kuaishou_ecommerce_open_api` | planned | authorized Kuaishou shop revenue proof |
-| `cn_taobao_open_platform` | planned | authorized Taobao/Tmall product/order signals |
-| `cn_jd_open_platform` | planned | authorized JD SKU/order signals |
-| `cn_pdd_open_platform` | planned | authorized Pinduoduo goods/order signals |
-| `cn_1688_open_platform` | planned | B2B supply-side signals |
-| `cn_meituan_open_platform` | planned | local service merchant/order signals |
-| `cn_ele_me_open_platform` | planned | food delivery merchant/order signals |
-| `cn_dewu_manual` | manual | youth marketplace price and demand snapshots |
-| `cn_wechat_channels_assistant_manual` | manual | owned WeChat Channels backend snapshots |
-| `cn_wechat_channels_miniapp_api` | planned | owned WeChat Channels / mini-program connection signals |
-| `cn_wechat_store_api` | planned | authorized WeChat Store order/revenue proof |
-| `cn_wechat_public_manual` | manual | expert and B2B vertical narratives |
-| `cn_baidu_index` | manual | China search interest |
-| `cn_wechat_index` | manual | WeChat ecosystem interest |
-| `cn_douban_group_manual` | manual | niche lifestyle/community pain |
+- Use official or explicitly authorized access paths.
+- Prefer owned-account, merchant, order, or authorized backend data when possible.
+- Store minimum auditable fields.
+- Add tests for rate limits, redaction, malformed responses, and access failures.
+- Do not scrape private or login-restricted data as a normal runtime source.
 
-## Restricted Social Commerce Platforms
+Best current use:
 
-Xiaohongshu, Douyin, and WeChat Channels are high-value opportunity sources, but they should not be treated as ordinary open feeds.
-
-| Platform | Broad Public Discovery | Owned/Authorized Data | Best Current Use |
-|----------|------------------------|-----------------------|------------------|
-| Xiaohongshu | manual only in this project | Ark merchant order API and mini-app platform are planned | consumer language, ecommerce revenue proof, owned funnel tests |
-| Douyin | planned only through approved official search capability | open video data requires user authorization | short-video demand discovery, owned content validation |
-| WeChat Channels | manual only in this project | Channels Assistant, mini-program capabilities, and Store APIs are scoped to owned/authorized accounts | private-domain validation, livestream/content review, store revenue proof |
-
-Implementation rule: do not promote a restricted platform source to `active` until the adapter uses an official or explicitly authorized access path, stores only the minimum auditable fields, and has tests for rate limits, redaction, and failure modes.
-
-Selection rule: promote sources to `active` only after adapter behavior, access stability, and tests are clear.
+| Platform Type | Current ODE Treatment |
+|---|---|
+| Public social/content feeds | Mostly planned or manual. |
+| Owned account analytics | Manual or planned authorized API. |
+| Merchant/order proof | Planned authorized API. |
+| Screenshots/exports | Manual signal with source notes. |
 
 ## Commands
 
@@ -120,13 +123,13 @@ List all configured sources:
 python -m ode sources
 ```
 
-List only active runtime sources:
+List active runtime sources:
 
 ```bash
 python -m ode sources --status active
 ```
 
-List China-focused sources:
+List China-focused registry entries:
 
 ```bash
 python -m ode sources --region china
@@ -135,37 +138,38 @@ python -m ode sources --region china
 Get JSON:
 
 ```bash
-python -m ode --json sources
+python -m ode --json sources --region global
 ```
 
-Run a scan using current runtime sources:
+Run a scan using runtime scan sources:
 
 ```bash
 python -m ode scan --keywords "AI agents,developer tools" --hn-top 50 --reddit "startup,SaaS,MachineLearning"
 ```
 
-Listen for pain signals and solution-side Product Hunt proxies:
+Listen for pain signals:
 
 ```bash
 python -m ode pain --reddit "SaaS,SideProject,microsaas,webdev" --hn-top 50 --min-grade D
 ```
 
-`ode pain` exposes reachable community evidence grades only: C, D, and E. Product Hunt is treated as a solution-side source: even explicit launch-copy pain is capped below primary community evidence until a Reddit/HN/user quote confirms the painful job. Launch and success-story posts are downranked so revenue claims stay in the separate `ode cases` workflow.
+## Signal Fields
 
-## Signal Audit Fields
-
-Signals produced by runtime scanners should include:
+Runtime signals should preserve:
 
 | Field | Meaning |
-|-------|---------|
-| `source_id` | stable registry id, for example `hackernews_topstories` |
-| `source` | display/source detail, for example `reddit/r/SaaS` |
-| `title` | signal text |
-| `url` | source URL when available |
-| `strength` | `强`, `中`, or `弱` |
-| `momentum` | source-specific momentum metric |
-| `relevance_score` | keyword match score added during aggregate scan |
+|---|---|
+| `source_id` | Stable registry id, such as `hackernews_topstories`. |
+| `source` | Display/source detail, such as `reddit/r/SaaS`. |
+| `title` | Primary text used for clustering and scoring. |
+| `url` | Source URL when available. |
+| `strength` | Adapter-normalized relative strength. |
+| `momentum` | Source-specific momentum or engagement proxy. |
+| `relevance_score` | Aggregate keyword relevance when applicable. |
+| `raw_data` | Original adapter fields where preserved. |
+
+When comparing strength values, use the code helpers instead of hand-typing literal strings; some legacy display literals are historical and should not become a new public contract.
 
 ## Design Rule
 
-Discovery should stay open, but every signal must be traceable. If a source is not in the registry, it should not silently influence scoring.
+Discovery should stay broad, but every signal must be traceable. If a source is not in the registry and not tied to a runtime context or manual note, it should not influence scoring or alerts.

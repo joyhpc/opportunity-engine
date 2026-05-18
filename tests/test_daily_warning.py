@@ -85,6 +85,62 @@ def test_b_grade_revenue_case_moves_to_validate_soon():
 
     assert result["alerts"][0]["status"] == VALIDATE_SOON
     assert result["alerts"][0]["best_grade"] == "B"
+    assert result["alerts"][0]["why"]["next_validation"]
+
+
+def test_market_map_revenue_case_is_capped_at_watch():
+    candidates = normalize_daily_inputs(revenue_cases=[
+        _revenue_case(
+            archetype="incumbent_market_map",
+            evidence_independence="hard_independent",
+            suitability="Market Map",
+            case_role="market_map",
+            entry_fit=32,
+            quiet_money_score=38,
+            case={
+                "id": "ai-server-incumbent",
+                "name": "AI Server Incumbent Revenue",
+                "category": "AI hardware",
+                "claim": "Audited filing shows $2B revenue.",
+                "source_ids": ["annual_report"],
+                "evidence": [{"type": "audited_financial", "source_name": "Annual report"}],
+                "fit_tags": ["hardware", "AI infrastructure"],
+                "risk_flags": ["heavy_capital", "requires_inventory"],
+            },
+        )
+    ])
+
+    result = update_watchlist(empty_watchlist(), candidates, run_date="2026-05-11")
+
+    assert result["alerts"][0]["status"] == WATCH
+    assert "market_map_cap" in result["alerts"][0]["gates_applied"]
+    assert result["alerts"][0]["why"]["evidence_gaps"]
+
+
+def test_single_ultimate_pr_case_is_capped_at_watch():
+    candidates = normalize_daily_inputs(revenue_cases=[
+        _revenue_case(
+            evidence_independence="single_ultimate",
+            suitability="Prime Case",
+            case_role="buildable_wedge",
+            case={
+                "id": "pr-only",
+                "name": "PR Only ARR Claim",
+                "category": "AI workflow",
+                "claim": "Company says it reached $100M ARR.",
+                "source_ids": ["company_pr"],
+                "evidence": [{"type": "company_pr", "source_name": "Company"}],
+                "fit_tags": ["AI workflows"],
+                "risk_flags": [],
+            },
+        )
+    ])
+
+    result = update_watchlist(empty_watchlist(), candidates, run_date="2026-05-11")
+
+    assert result["alerts"][0]["status"] == WATCH
+    assert "verifiability_cap:single_ultimate" in result["alerts"][0]["gates_applied"]
+    assert "second independent" in result["alerts"][0]["why"]["evidence_gaps"][0]
 
 
 def test_product_hunt_alone_cannot_become_validate_soon():
@@ -146,9 +202,14 @@ def test_learn_case_priors_extracts_reusable_patterns():
     ])
 
     assert priors
-    assert priors[0]["case_count"] == 2
-    assert priors[0]["status_bias"] == VALIDATE_SOON
-    assert any("payment" in trigger or "formal revenue" in trigger for trigger in priors[0]["warning_triggers"])
+    by_archetype = {prior["archetype"]: prior for prior in priors}
+    assert "quiet_b2b_paid_pilot" in by_archetype
+    assert "renewal_repeat_payment" in by_archetype
+    assert by_archetype["quiet_b2b_paid_pilot"]["status_bias"] == VALIDATE_SOON
+    assert any(
+        "payment" in trigger or "formal revenue" in trigger
+        for trigger in by_archetype["quiet_b2b_paid_pilot"]["warning_triggers"]
+    )
 
 
 def test_initial_warning_system_builds_priors_and_watchlist():

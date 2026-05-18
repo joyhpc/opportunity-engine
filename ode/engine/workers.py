@@ -6,7 +6,6 @@ that the Engine calls via asyncio.gather() for parallelism.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from datetime import datetime
 
@@ -15,11 +14,13 @@ logger = logging.getLogger(__name__)
 from ..core.models import (
     Opportunity, Signal, WorkerResult, _now_iso, _new_id,
 )
+from ..core.async_utils import run_blocking
+from ..core.scoring import OpportunityScorer
 from ..core.store import (
     save_opportunity, load_opportunity, save_signal,
     list_signals, reports_dir,
 )
-from ..tools import trend_scanner, market_sizer, opportunity_scorer
+from ..tools import trend_scanner, market_sizer
 from ..tools import financial_model, competitor_matrix, report_generator
 from .gate import evaluate_gate
 
@@ -53,14 +54,12 @@ async def scan_worker(
             message="No keywords provided for scanning",
         )
 
-    # Run scanners (sync, wrapped in executor for async compat)
-    loop = asyncio.get_running_loop()
-    raw_signals = await loop.run_in_executor(
-        None,
-        lambda: trend_scanner.scan_all(
-            keywords=kws, domain=domain,
-            hn_top=hn_top, subreddits=subreddits,
-        ),
+    raw_signals = await run_blocking(
+        trend_scanner.scan_all,
+        keywords=kws,
+        domain=domain,
+        hn_top=hn_top,
+        subreddits=subreddits,
     )
 
     # Dedup by title
@@ -206,17 +205,7 @@ async def eval_worker(
             eval_data["auto_inferred"] = True
 
     if scores:
-        scoring_result = opportunity_scorer.score_opportunity(
-            opp.name, scores,
-        )
-        opp.scores = {
-            dim_name: ds["average"]
-            for dim_name, ds in scoring_result.dimension_scores.items()
-        }
-        # FIX #6/#7: store the actual weighted percentage for portfolio/report use
-        opp.scores["_weighted_pct"] = scoring_result.percentage
-        # Store scoring details for reframe context awareness
-        opp.scores["_scoring_details"] = scoring_result.details
+        scoring_result = OpportunityScorer().apply(opp, scores)
         eval_data["scoring"] = scoring_result.to_dict()
 
         # Evaluate gate
@@ -321,6 +310,16 @@ async def report_worker(
                 report_text += "\n\n" + format_synthesis_report(synthesis)
         except Exception as e:
             logger.warning("Synthesis failed for %s: %s", opp_id, e)
+
+    # Append latest saved DBS Lens diagnostic if present.
+    try:
+        from ..heuristics.dbs import latest_diagnostic, format_saved_diagnostic_report
+
+        dbs_record = latest_diagnostic(opp.to_dict())
+        if dbs_record:
+            report_text += "\n\n" + format_saved_diagnostic_report(dbs_record)
+    except Exception as e:
+        logger.warning("DBS Lens report append failed for %s: %s", opp_id, e)
 
     # Save report
     rdir = reports_dir()

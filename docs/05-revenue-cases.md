@@ -41,6 +41,44 @@ Avoid treating this as attractive just because the evidence is strong:
 A-grade revenue evidence + incumbent scale + heavy capital, inventory, certification, or long procurement
 ```
 
+## Case Archetypes
+
+Seed cases now carry an `archetype` so the warning system can learn from different kinds of proof instead of treating every ARR headline the same.
+
+| Archetype | Meaning | Default Warning Bias |
+|-----------|---------|----------------------|
+| `public_pr_mega_arr` | Large ARR or run-rate claim primarily from company PR | Watch; verify source independence before promotion |
+| `incumbent_market_map` | Strong proof of a big budget pool but poor direct entry fit | Watch; search for adjacent B/C wedges |
+| `quiet_b2b_paid_pilot` | Signed contract or paid pilot for a narrow operational workflow | Validate Soon when fit and repeatability are workable |
+| `renewal_repeat_payment` | Renewal, repeat order, or second paid cycle | Validate Soon; prioritize repeatability verification |
+| `indie_micro_saas` | Small self-serve revenue with hard payment trace | Validate Soon when founder fit and build scope are realistic |
+
+The warning layer also records `evidence_independence`:
+
+| Independence | Meaning |
+|--------------|---------|
+| `hard_independent` | Contract, receipt, audited filing, public filing, or exchange-grade proof |
+| `formal_independent` | Formal disclosure corroborated by another source |
+| `single_ultimate` | Evidence appears to trace back to one company-originated source |
+| `media_only` | Secondary media or estimate without primary proof |
+
+## Warning Gates
+
+Initial and daily warnings use a composite score plus caps:
+
+```text
+0.25 evidence + 0.20 founder_fit + 0.20 entry_fit + 0.20 quiet_money + 0.15 confidence
+- risk_penalty + wildcard_bonus
+```
+
+Promotion is then gated:
+
+- **Suitability gate** caps `Market Map`, `Verify First`, and `Watchlist` cases at `Watch`.
+- **Risk gate** caps heavy-capital or slow-procurement cases when entry fit is low.
+- **Verifiability gate** caps `single_ultimate` and `media_only` revenue cases at `Watch` until independent proof appears.
+
+Every alert should explain its `level_reason`, `evidence_gaps`, and `next_validation` so a high-revenue PR does not masquerade as an immediately buildable opportunity.
+
 ## Quiet Money Rule
 
 Many profitable opportunities are quiet because the seller is a small operator, channel partner, integrator, agency, dealer, or vertical workflow vendor. Do not rely only on press releases, funding news, launch rankings, or viral posts.

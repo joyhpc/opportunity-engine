@@ -5,6 +5,12 @@ SCHEMA_VERSION = "1.0"
 # Pipeline stages in order
 STAGES = ["SENSE", "SCREEN", "ANALYZE", "VALIDATE", "PLAN", "LAUNCH", "MONITOR"]
 
+# Evidence grades in descending strength. Pain listening currently emits only
+# C-E, while revenue and warning surfaces use the full A-E scale.
+EVIDENCE_GRADES = ("A", "B", "C", "D", "E")
+PAIN_EVIDENCE_GRADES = ("C", "D", "E")
+EVIDENCE_GRADE_STRENGTH = {"A": 5, "B": 4, "C": 3, "D": 2, "E": 1}
+
 # Stage gate thresholds
 GATE_THRESHOLDS = {
     "SENSE": {

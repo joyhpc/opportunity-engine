@@ -23,6 +23,7 @@
       ],
       "fit_tags": ["AI creative", "subscription", "creator tools", "workflow", "software"],
       "risk_flags": ["platform_dependency"],
+      "archetype": "public_pr_mega_arr",
       "notes": "Useful pattern: AI-first creative workflow bundle plus existing asset library and paid subscriber base."
     },
     {
@@ -53,6 +54,7 @@
       ],
       "fit_tags": ["AI workflows", "subscription", "consumer productivity", "China", "design tools"],
       "risk_flags": ["platform_dependency"],
+      "archetype": "public_pr_mega_arr",
       "notes": "Useful pattern: consumer photo/video audience converted into paid AI productivity tools."
     },
     {
@@ -83,6 +85,7 @@
       ],
       "fit_tags": ["developer tools", "AI infrastructure", "API", "cloud", "software engineering"],
       "risk_flags": ["heavy_capital"],
+      "archetype": "incumbent_market_map",
       "notes": "Useful pattern: painful GPU operations packaged for developers; strong fit for tooling insight, weaker fit for direct replication because of capital intensity."
     },
     {
@@ -113,6 +116,7 @@
       ],
       "fit_tags": ["AI video", "creative tools", "subscription", "API", "China"],
       "risk_flags": ["platform_dependency"],
+      "archetype": "public_pr_mega_arr",
       "notes": "Useful pattern: paid AI generation credits/subscriptions can monetize quickly when output quality and distribution align."
     },
     {
@@ -137,6 +141,7 @@
       ],
       "fit_tags": ["enterprise SaaS", "AI workflows", "contracts", "B2B"],
       "risk_flags": ["enterprise_procurement", "regulated"],
+      "archetype": "incumbent_market_map",
       "notes": "Useful pattern: high-value document workflows with compliance pressure; slower sales motion for small builders."
     },
     {
@@ -167,6 +172,7 @@
       ],
       "fit_tags": ["developer tools", "AI agents", "app builder", "automation", "subscription"],
       "risk_flags": ["platform_dependency", "crowded_market"],
+      "archetype": "public_pr_mega_arr",
       "notes": "Useful pattern: natural-language app creation with fast self-serve monetization and strong viral/demo loops."
     },
     {
@@ -191,6 +197,7 @@
       ],
       "fit_tags": ["automation", "sales workflows", "data enrichment", "B2B", "AI workflows"],
       "risk_flags": ["enterprise_procurement", "data_dependency"],
+      "archetype": "public_pr_mega_arr",
       "notes": "Useful pattern: spreadsheet-like workflow surface plus data integrations for high-value GTM jobs."
     },
     {
@@ -215,6 +222,7 @@
       ],
       "fit_tags": ["AI workflows", "customer support", "contact center", "B2B", "automation"],
       "risk_flags": ["enterprise_procurement", "human_operations"],
+      "archetype": "public_pr_mega_arr",
       "notes": "Useful pattern: AI automation bundled with human escalation for measurable customer operations outcomes."
     },
     {
@@ -239,6 +247,7 @@
       ],
       "fit_tags": ["data infrastructure", "AI workflows", "enterprise SaaS", "analytics", "B2B"],
       "risk_flags": ["enterprise_procurement", "technical_complexity"],
+      "archetype": "incumbent_market_map",
       "notes": "Useful pattern: existing data platforms repositioning around AI readiness and enterprise workflow displacement."
     },
     {
@@ -263,7 +272,133 @@
       ],
       "fit_tags": ["AI workflows", "customer operations", "collaboration", "B2B", "automation"],
       "risk_flags": ["enterprise_procurement", "crowded_market"],
+      "archetype": "public_pr_mega_arr",
       "notes": "Useful pattern: collaboration system of record plus AI automation for recurring operational communication."
+    },
+    {
+      "id": "invoice_ops_paid_pilot_202604",
+      "name": "Invoice Ops Paid Pilot",
+      "category": "Vertical SaaS workflow automation",
+      "region": "global",
+      "published_at": "2026-04-10",
+      "claim": "A small finance-ops consultancy signed a $12K paid pilot for AI-assisted invoice reconciliation and exception handling.",
+      "metric_type": "contract_value",
+      "amount": 12000,
+      "currency": "USD",
+      "period": "paid pilot signed in 2026-04",
+      "source_ids": ["manual_signal"],
+      "evidence": [
+        {
+          "type": "signed_contract",
+          "source_name": "Integrator contract",
+          "url": "https://example.com/invoice-ops-contract",
+          "notes": "Paid pilot for invoice matching, exception triage, and weekly reconciliation reports."
+        }
+      ],
+      "fit_tags": ["AI workflows", "automation", "vertical SaaS", "invoice", "finance ops"],
+      "risk_flags": [],
+      "archetype": "quiet_b2b_paid_pilot",
+      "notes": "Useful pattern: unglamorous finance operations with explicit payment and a narrow buyer."
+    },
+    {
+      "id": "compliance_report_micro_saas_mrr_202603",
+      "name": "Compliance Report Micro-SaaS MRR",
+      "category": "Compliance workflow micro-SaaS",
+      "region": "global",
+      "published_at": "2026-03-18",
+      "claim": "A solo founder shared Stripe-backed $8K MRR for automated SOC2 evidence collection reports for tiny B2B SaaS teams.",
+      "metric_type": "mrr",
+      "amount": 8000,
+      "currency": "USD",
+      "period": "monthly recurring revenue as of 2026-03",
+      "source_ids": ["indiehackers_manual"],
+      "evidence": [
+        {
+          "type": "payment_receipt",
+          "source_name": "Founder Stripe export",
+          "url": "https://example.com/soc2-stripe-export",
+          "notes": "Founder-attested Stripe export with plan count and churn notes."
+        }
+      ],
+      "fit_tags": ["developer tools", "automation", "compliance", "micro SaaS", "AI workflows"],
+      "risk_flags": ["regulated"],
+      "archetype": "indie_micro_saas",
+      "notes": "Useful pattern: narrow compliance artifact generation with self-serve entry and explicit small-dollar revenue."
+    },
+    {
+      "id": "robot_rental_maintenance_renewal_202602",
+      "name": "Robot Rental Maintenance Renewal",
+      "category": "Robotics operations software",
+      "region": "global",
+      "published_at": "2026-02-08",
+      "claim": "A regional robot rental dealer renewed a $24K annual subscription for maintenance scheduling, booking, and operator handoff workflows.",
+      "metric_type": "subscription_revenue",
+      "amount": 24000,
+      "currency": "USD",
+      "period": "annual renewal in 2026-02",
+      "source_ids": ["manual_signal"],
+      "evidence": [
+        {
+          "type": "payment_receipt",
+          "source_name": "Dealer renewal receipt",
+          "url": "https://example.com/robot-rental-renewal",
+          "notes": "Renewal receipt tied to rental booking, maintenance, and repeat operator workflows."
+        }
+      ],
+      "fit_tags": ["automation", "vertical SaaS", "robotics", "maintenance", "rental"],
+      "risk_flags": ["hardware_adjacent"],
+      "archetype": "renewal_repeat_payment",
+      "notes": "Useful pattern: software around hardware operations instead of building hardware."
+    },
+    {
+      "id": "field_service_quote_assistant_pilot_202601",
+      "name": "Field Service Quote Assistant Pilot",
+      "category": "Field service workflow automation",
+      "region": "global",
+      "published_at": "2026-01-22",
+      "claim": "A HVAC services operator paid $6K for a pilot that converts technician notes into customer-ready repair quotes.",
+      "metric_type": "contract_value",
+      "amount": 6000,
+      "currency": "USD",
+      "period": "paid pilot signed in 2026-01",
+      "source_ids": ["manual_signal"],
+      "evidence": [
+        {
+          "type": "signed_contract",
+          "source_name": "Operator pilot agreement",
+          "url": "https://example.com/field-service-pilot",
+          "notes": "Paid pilot with one multi-location operator and explicit quote turnaround KPI."
+        }
+      ],
+      "fit_tags": ["AI workflows", "field service", "quote automation", "vertical SaaS", "operations"],
+      "risk_flags": ["human_operations"],
+      "archetype": "quiet_b2b_paid_pilot",
+      "notes": "Useful pattern: document generation tied to revenue operations and quick measurable turnaround."
+    },
+    {
+      "id": "creator_sponsorship_ops_tool_mrr_202512",
+      "name": "Creator Sponsorship Ops Tool MRR",
+      "category": "Creator operations software",
+      "region": "global",
+      "published_at": "2025-12-15",
+      "claim": "An indie builder reported $4.5K MRR from a sponsorship pipeline and invoice tracker for small newsletter operators.",
+      "metric_type": "mrr",
+      "amount": 4500,
+      "currency": "USD",
+      "period": "monthly recurring revenue as of 2025-12",
+      "source_ids": ["indiehackers_manual"],
+      "evidence": [
+        {
+          "type": "payment_receipt",
+          "source_name": "Founder Stripe screenshot",
+          "url": "https://example.com/creator-sponsorship-mrr",
+          "notes": "Payment screenshot plus customer count; needs follow-up churn verification."
+        }
+      ],
+      "fit_tags": ["creator tools", "workflow", "invoice", "micro SaaS", "automation"],
+      "risk_flags": ["platform_dependency"],
+      "archetype": "indie_micro_saas",
+      "notes": "Useful pattern: small but reachable buyer group with recurring admin pain and low build cost."
     }
   ]
 }

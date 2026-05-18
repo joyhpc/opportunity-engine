@@ -13,6 +13,8 @@ from collections import Counter
 from datetime import date, datetime
 from typing import Any
 
+from ode.core.constants import EVIDENCE_GRADE_STRENGTH as GRADE_STRENGTH
+
 
 NEW_SPARK = "New Spark"
 WATCH = "Watch"
@@ -20,8 +22,6 @@ VALIDATE_SOON = "Validate Soon"
 ACT_NOW = "Act Now"
 
 ACTIVE_LABELS = [NEW_SPARK, WATCH, VALIDATE_SOON, ACT_NOW]
-
-GRADE_STRENGTH = {"A": 5, "B": 4, "C": 3, "D": 2, "E": 1}
 STALE_AFTER_DAYS = 3
 
 STOPWORDS = {
@@ -110,6 +110,13 @@ def merge_candidates(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "best_grade": "E",
             "priority": 0.0,
             "founder_fit": 0.0,
+            "risk_flags": [],
+            "case_ids": [],
+            "archetypes": [],
+            "suitabilities": [],
+            "case_roles": [],
+            "evidence_independence": "",
+            "composite_components": {},
             "evidence_refs": [],
             "reasons": [],
             "next_actions": [],
@@ -119,6 +126,11 @@ def merge_candidates(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
         item["tags"] = _unique(item["tags"] + candidate.get("tags", []))
         item["source_ids"] = _unique(item["source_ids"] + candidate.get("source_ids", []))
         item["source_titles"] = _unique(item["source_titles"] + candidate.get("source_titles", []))
+        item["risk_flags"] = _unique(item["risk_flags"] + candidate.get("risk_flags", []))
+        item["case_ids"] = _unique(item["case_ids"] + candidate.get("case_ids", []))
+        item["archetypes"] = _unique(item["archetypes"] + candidate.get("archetypes", []))
+        item["suitabilities"] = _unique(item["suitabilities"] + candidate.get("suitabilities", []))
+        item["case_roles"] = _unique(item["case_roles"] + candidate.get("case_roles", []))
         item["evidence_refs"] = _unique_dicts(item["evidence_refs"] + candidate.get("evidence_refs", []))
         item["reasons"] = _unique(item["reasons"] + candidate.get("reasons", []))
         item["next_actions"] = _unique(item["next_actions"] + candidate.get("next_actions", []))
@@ -126,6 +138,11 @@ def merge_candidates(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
         item["priority"] = max(float(item["priority"]), float(candidate.get("priority", 0) or 0))
         item["founder_fit"] = max(float(item["founder_fit"]), float(candidate.get("founder_fit", 0) or 0))
         item["source_diversity"] = len({source for source in item["source_ids"] if source})
+        item["evidence_independence"] = _strongest_independence(
+            item.get("evidence_independence", ""),
+            candidate.get("evidence_independence", ""),
+        )
+        item["composite_components"].update(candidate.get("composite_components", {}))
         item["metrics"].update(candidate.get("metrics", {}))
 
     return sorted(
@@ -160,8 +177,11 @@ def update_watchlist(
         seen_ids.add(alert_id)
         previous = previous_items.get(alert_id)
         item = _merge_state_item(previous, candidate, day)
-        status = classify_alert(candidate, previous_item=previous, state_item=item)
+        evaluation = evaluate_alert_level(candidate, previous_item=previous, state_item=item)
+        status = evaluation["status"]
         item["status"] = status
+        item["why"] = evaluation["why"]
+        item["gates_applied"] = evaluation["gates_applied"]
         item["lifecycle"] = "active"
         item["updated_at"] = datetime.now().isoformat(timespec="seconds")
         next_items[alert_id] = item
@@ -175,6 +195,8 @@ def update_watchlist(
             "priority_delta": item["priority_delta"],
             "previous_status": previous.get("status") if previous else "",
             "lifecycle": item["lifecycle"],
+            "why": evaluation["why"],
+            "gates_applied": evaluation["gates_applied"],
         }
         alerts.append(alert)
         updates.append({
@@ -224,6 +246,7 @@ def build_initial_warning_system(
     previous_state: dict[str, Any] | None,
     revenue_cases: list[dict[str, Any]],
     *,
+    profile: dict[str, Any] | None = None,
     run_date: str | None = None,
     reset: bool = False,
 ) -> dict[str, Any]:
@@ -238,6 +261,7 @@ def build_initial_warning_system(
         "priors": priors,
         "case_count": len(revenue_cases),
         "candidate_count": len(candidates),
+        "profile": profile or {},
         "reset": reset,
     }
 
@@ -250,7 +274,8 @@ def learn_case_priors(revenue_cases: list[dict[str, Any]]) -> list[dict[str, Any
         case = analysis.get("case", {})
         tags = [str(tag) for tag in case.get("fit_tags", []) if tag]
         category = str(case.get("category") or "uncategorized")
-        pattern = _case_pattern_name(category, tags)
+        archetype = str(analysis.get("archetype") or case.get("archetype") or _infer_case_archetype_from_analysis(analysis))
+        pattern = archetype or _case_pattern_name(category, tags)
         prior_id = f"prior-{hashlib.sha1(pattern.lower().encode('utf-8')).hexdigest()[:10]}"
         group = groups.setdefault(prior_id, {
             "id": prior_id,
@@ -262,6 +287,8 @@ def learn_case_priors(revenue_cases: list[dict[str, Any]]) -> list[dict[str, Any
             "risk_flags": [],
             "case_roles": [],
             "suitabilities": [],
+            "evidence_independence": [],
+            "archetype": archetype,
             "best_grade": "E",
             "_founder_fit": [],
             "_entry_fit": [],
@@ -275,6 +302,7 @@ def learn_case_priors(revenue_cases: list[dict[str, Any]]) -> list[dict[str, Any
         group["risk_flags"].extend(case.get("risk_flags", []))
         group["case_roles"].append(analysis.get("case_role", ""))
         group["suitabilities"].append(analysis.get("suitability", ""))
+        group["evidence_independence"].append(analysis.get("evidence_independence", ""))
         group["best_grade"] = _best_grade(group["best_grade"], analysis.get("evidence_grade", "E"))
         group["_founder_fit"].append(float(analysis.get("founder_fit", 0) or 0))
         group["_entry_fit"].append(float(analysis.get("entry_fit", 0) or 0))
@@ -295,6 +323,8 @@ def learn_case_priors(revenue_cases: list[dict[str, Any]]) -> list[dict[str, Any
             "risk_flags": risk_flags,
             "case_roles": _unique(group["case_roles"]),
             "suitabilities": _unique(group["suitabilities"]),
+            "evidence_independence": _unique(group["evidence_independence"]),
+            "archetype": group["archetype"],
             "best_grade": group["best_grade"],
             "avg_founder_fit": _avg(group["_founder_fit"]),
             "avg_entry_fit": _avg(group["_entry_fit"]),
@@ -325,6 +355,21 @@ def classify_alert(
 ) -> str:
     """Classify a warning candidate into the fixed daily alert levels."""
 
+    return evaluate_alert_level(
+        candidate,
+        previous_item=previous_item,
+        state_item=state_item,
+    )["status"]
+
+
+def evaluate_alert_level(
+    candidate: dict[str, Any],
+    *,
+    previous_item: dict[str, Any] | None = None,
+    state_item: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Classify a candidate and return structured explanation metadata."""
+
     source_ids = {source for source in candidate.get("source_ids", []) if source}
     only_product_hunt = source_ids == {"producthunt_feed"}
     candidate_types = set(candidate.get("candidate_types", []))
@@ -335,6 +380,13 @@ def classify_alert(
     source_diversity = int(candidate.get("source_diversity", 0) or len(source_ids))
     days_seen = int((state_item or {}).get("days_seen", 1) or 1)
     priority_delta = float((state_item or {}).get("priority_delta", 0) or 0)
+    suitability = _first(candidate.get("suitabilities", [])) or str(candidate.get("suitability", ""))
+    case_role = _first(candidate.get("case_roles", [])) or str(candidate.get("case_role", ""))
+    evidence_independence = candidate.get("evidence_independence", "")
+    archetypes = set(candidate.get("archetypes", []))
+    risk_flags = set(candidate.get("risk_flags", []))
+    entry_fit = float(candidate.get("metrics", {}).get("entry_fit", 0) or 0)
+    gates: list[str] = []
 
     previous_grade = (previous_item or {}).get("best_grade", "E")
     grade_upgraded = grade_strength > GRADE_STRENGTH.get(previous_grade, 1)
@@ -342,6 +394,7 @@ def classify_alert(
         grade_upgraded or priority_delta >= 15 or source_diversity > int(previous_item.get("source_diversity", 0) or 0)
     )
 
+    status = NEW_SPARK
     if (
         previous_item
         and status_upgraded
@@ -349,19 +402,43 @@ def classify_alert(
         and (grade_strength >= GRADE_STRENGTH["B"] or priority >= 82)
         and not only_product_hunt
     ):
-        return ACT_NOW
+        status = ACT_NOW
 
-    if not only_product_hunt:
+    if status != ACT_NOW and not only_product_hunt:
         if "revenue_case" in candidate_types and grade_strength >= GRADE_STRENGTH["B"]:
-            return VALIDATE_SOON
+            status = VALIDATE_SOON
         if "pain_signal" in candidate_types and grade_strength >= GRADE_STRENGTH["C"]:
-            return VALIDATE_SOON
+            status = VALIDATE_SOON
         if priority >= 84 and founder_fit >= 70 and source_diversity >= 2:
-            return VALIDATE_SOON
+            status = VALIDATE_SOON
 
-    if days_seen >= 2 or source_diversity >= 2 or priority >= 65:
-        return WATCH
-    return NEW_SPARK
+    if status == NEW_SPARK and (days_seen >= 2 or source_diversity >= 2 or priority >= 65):
+        status = WATCH
+
+    if only_product_hunt:
+        status = _cap_status(status, WATCH)
+        gates.append("product_hunt_solution_proxy_cap")
+    if evidence_independence in {"single_ultimate", "media_only"} and "revenue_case" in candidate_types:
+        status = _cap_status(status, WATCH)
+        gates.append(f"verifiability_cap:{evidence_independence}")
+    if suitability in {"Market Map", "Watchlist", "Verify First"}:
+        status = _cap_status(status, WATCH)
+        gates.append(f"suitability_cap:{suitability}")
+    if archetypes & {"public_pr_mega_arr", "incumbent_market_map"}:
+        status = _cap_status(status, WATCH)
+        gates.append("archetype_cap:market_map_or_pr_arr")
+    if case_role == "market_map":
+        status = _cap_status(status, WATCH)
+        gates.append("market_map_cap")
+    if "heavy_capital" in risk_flags and entry_fit < 62:
+        status = _cap_status(status, WATCH)
+        gates.append("risk_cap:heavy_capital_low_entry_fit")
+    if "enterprise_procurement" in risk_flags and entry_fit < 62:
+        status = _cap_status(status, WATCH)
+        gates.append("risk_cap:enterprise_procurement_slow_validation")
+
+    why = _explain_alert(candidate, status, gates)
+    return {"status": status, "gates_applied": gates, "why": why}
 
 
 def format_daily_report(
@@ -400,6 +477,7 @@ def format_daily_report(
             "|-------|-------|----------|-----|---------|-------|-----|",
         ])
         for alert in alerts:
+            why = alert.get("why", {})
             lines.append(
                 f"| {alert.get('status', NEW_SPARK)} | "
                 f"{_cell(alert.get('title', ''))} | "
@@ -407,8 +485,20 @@ def format_daily_report(
                 f"{float(alert.get('founder_fit', 0) or 0):.1f} | "
                 f"{alert.get('source_diversity', 0)} | "
                 f"{float(alert.get('priority_delta', 0) or 0):+.1f} | "
-                f"{_cell(_first(alert.get('reasons', [])))} |"
+                f"{_cell(why.get('level_reason') or _first(alert.get('reasons', [])))} |"
             )
+        lines.append("")
+
+        lines.extend(["### Evidence Gaps And Next Validation", ""])
+        for alert in alerts[:8]:
+            why = alert.get("why", {})
+            gaps = "; ".join(why.get("evidence_gaps", [])) or "No major gap recorded."
+            validation = why.get("next_validation") or _first(alert.get("next_actions", []))
+            lines.extend([
+                f"**{alert.get('title', '')}**",
+                f"- Gaps: {gaps}",
+                f"- Next validation: {validation}",
+            ])
         lines.append("")
     else:
         lines.extend(["## Alerts", "", "No active alerts today.", ""])
@@ -494,16 +584,17 @@ def format_initial_warning_report(result: dict[str, Any]) -> str:
         lines.extend([
             "## Initial Watchlist",
             "",
-            "| Level | Topic | Evidence | Fit | Sources | Next Action |",
-            "|-------|-------|----------|-----|---------|-------------|",
+            "| Level | Topic | Evidence | Composite | Fit | Sources | Next Action |",
+            "|-------|-------|----------|-----------|-----|---------|-------------|",
         ])
         for alert in alerts:
             lines.append(
                 f"| {alert.get('status', NEW_SPARK)} | {_cell(alert.get('title', ''))} | "
                 f"{alert.get('best_grade', 'E')} | "
+                f"{float(alert.get('priority', 0) or 0):.1f} | "
                 f"{float(alert.get('founder_fit', 0) or 0):.1f} | "
                 f"{alert.get('source_diversity', 0)} | "
-                f"{_cell(_first(alert.get('next_actions', [])))} |"
+                f"{_cell((alert.get('why') or {}).get('next_validation') or _first(alert.get('next_actions', [])))} |"
             )
         lines.append("")
 
@@ -538,6 +629,13 @@ def _candidate_from_pain(signal: dict[str, Any]) -> dict[str, Any]:
         "best_grade": grade,
         "priority": priority,
         "founder_fit": founder_fit,
+        "risk_flags": [],
+        "case_ids": [],
+        "archetypes": [],
+        "suitabilities": [],
+        "case_roles": [],
+        "evidence_independence": "",
+        "composite_components": {"pain_priority": priority, "founder_fit": founder_fit},
         "evidence_refs": [{
             "type": "pain_signal",
             "title": title,
@@ -566,13 +664,17 @@ def _candidate_from_revenue_case(analysis: dict[str, Any]) -> dict[str, Any]:
             for item in case.get("evidence", [])
             if isinstance(item, dict)
         ] or ["revenue_case"]
-    priority = max(
-        float(analysis.get("quiet_money_score", 0) or 0),
-        float(analysis.get("entry_fit", 0) or 0),
-        float(analysis.get("confidence", 0) or 0),
-    )
+    composite = _revenue_composite(analysis)
+    priority = composite["score"]
     founder_fit = float(analysis.get("founder_fit", 0) or 0)
     topic_key = _topic_key(" ".join(tags) or f"{case.get('category', '')} {title}")
+    archetype = str(analysis.get("archetype") or case.get("archetype") or _infer_case_archetype_from_analysis(analysis))
+    evidence_independence = str(
+        analysis.get("evidence_independence")
+        or _infer_evidence_independence(case)
+    )
+    suitability = str(analysis.get("suitability", ""))
+    case_role = str(analysis.get("case_role", ""))
     return {
         "topic_key": topic_key,
         "title": title,
@@ -585,6 +687,13 @@ def _candidate_from_revenue_case(analysis: dict[str, Any]) -> dict[str, Any]:
         "best_grade": grade,
         "priority": priority,
         "founder_fit": founder_fit,
+        "risk_flags": list(case.get("risk_flags", [])),
+        "case_ids": [str(case.get("id", ""))],
+        "archetypes": [archetype],
+        "suitabilities": [suitability] if suitability else [],
+        "case_roles": [case_role] if case_role else [],
+        "evidence_independence": evidence_independence,
+        "composite_components": composite,
         "evidence_refs": [{
             "type": "revenue_case",
             "title": title,
@@ -593,13 +702,16 @@ def _candidate_from_revenue_case(analysis: dict[str, Any]) -> dict[str, Any]:
             "grade": grade,
         }],
         "reasons": [
-            f"Revenue evidence grade {grade}; suitability {analysis.get('suitability', 'unknown')}."
+            f"Revenue evidence grade {grade}; suitability {suitability or 'unknown'}; archetype {archetype}."
         ],
         "next_actions": list(analysis.get("next_actions") or []),
         "metrics": {
             "confidence": analysis.get("confidence", 0),
             "entry_fit": analysis.get("entry_fit", 0),
             "quiet_money_score": analysis.get("quiet_money_score", 0),
+            "suitability": suitability,
+            "case_role": case_role,
+            "revenue_quality": analysis.get("revenue_quality", ""),
         },
     }
 
@@ -623,6 +735,13 @@ def _candidate_from_hypothesis(hypothesis: dict[str, Any]) -> dict[str, Any]:
         "best_grade": "E",
         "priority": priority,
         "founder_fit": 0.0,
+        "risk_flags": [],
+        "case_ids": [],
+        "archetypes": ["explore_hypothesis"],
+        "suitabilities": [],
+        "case_roles": [],
+        "evidence_independence": "",
+        "composite_components": {"confidence": confidence, "score": priority},
         "evidence_refs": [{
             "type": "explore_hypothesis",
             "title": title,
@@ -662,18 +781,30 @@ def _merge_state_item(previous: dict[str, Any] | None, candidate: dict[str, Any]
         "candidate_types": _unique(previous.get("candidate_types", []) + candidate.get("candidate_types", [])),
         "tags": _unique(previous.get("tags", []) + candidate.get("tags", [])),
         "source_ids": _unique(previous.get("source_ids", []) + candidate.get("source_ids", [])),
+        "risk_flags": _unique(previous.get("risk_flags", []) + candidate.get("risk_flags", [])),
+        "case_ids": _unique(previous.get("case_ids", []) + candidate.get("case_ids", [])),
+        "archetypes": _unique(previous.get("archetypes", []) + candidate.get("archetypes", [])),
+        "suitabilities": _unique(previous.get("suitabilities", []) + candidate.get("suitabilities", [])),
+        "case_roles": _unique(previous.get("case_roles", []) + candidate.get("case_roles", [])),
         "source_diversity": max(
             int(previous.get("source_diversity", 0) or 0),
             int(candidate.get("source_diversity", 0) or 0),
         ),
         "best_grade": _best_grade(previous.get("best_grade", "E"), candidate.get("best_grade", "E")),
+        "evidence_independence": _strongest_independence(
+            previous.get("evidence_independence", ""),
+            candidate.get("evidence_independence", ""),
+        ),
         "priority": priority,
         "previous_priority": previous_priority,
         "priority_delta": round(priority - previous_priority, 1),
         "founder_fit": max(float(previous.get("founder_fit", 0) or 0), float(candidate.get("founder_fit", 0) or 0)),
+        "composite_components": candidate.get("composite_components", previous.get("composite_components", {})),
         "evidence_refs": _unique_dicts(previous.get("evidence_refs", []) + candidate.get("evidence_refs", []))[-12:],
         "last_reasons": candidate.get("reasons", []),
         "next_actions": candidate.get("next_actions", []),
+        "why": previous.get("why", {}),
+        "gates_applied": previous.get("gates_applied", []),
         "status": previous.get("status", NEW_SPARK),
         "lifecycle": "active",
     }
@@ -708,8 +839,197 @@ def _case_pattern_name(category: str, tags: list[str]) -> str:
     return category
 
 
+def _infer_case_archetype_from_analysis(analysis: dict[str, Any]) -> str:
+    case = analysis.get("case", {})
+    evidence = case.get("evidence", [])
+    evidence_types = {
+        item.get("type", "")
+        for item in evidence
+        if isinstance(item, dict)
+    }
+    text = " ".join([
+        str(case.get("name", "")),
+        str(case.get("category", "")),
+        str(case.get("claim", "")),
+        str(case.get("notes", "")),
+        " ".join(str(tag) for tag in case.get("fit_tags", [])),
+        " ".join(str(flag) for flag in case.get("risk_flags", [])),
+    ]).lower()
+
+    if analysis.get("suitability") == "Market Map" or analysis.get("case_role") == "market_map":
+        return "incumbent_market_map"
+    if evidence_types & {"signed_contract", "payment_receipt"}:
+        if any(term in text for term in {"renewal", "repeat", "retention"}):
+            return "renewal_repeat_payment"
+        if any(term in text for term in {"indie", "micro", "solo", "bootstrap", "mrr"}):
+            return "indie_micro_saas"
+        return "quiet_b2b_paid_pilot"
+    if float(case.get("amount", 0) or 0) >= 100_000_000 and "company_pr" in evidence_types:
+        return "public_pr_mega_arr"
+    return "revenue_case"
+
+
+def _infer_evidence_independence(case: dict[str, Any]) -> str:
+    evidence = case.get("evidence", [])
+    evidence_types = {
+        item.get("type", "")
+        for item in evidence
+        if isinstance(item, dict)
+    }
+    source_names = {
+        str(item.get("source_name", "")).lower()
+        for item in evidence
+        if isinstance(item, dict) and item.get("source_name")
+    }
+    if evidence_types & {"signed_contract", "payment_receipt", "audited_financial", "public_filing", "exchange_disclosure"}:
+        return "hard_independent"
+    if "company_formal_disclosure" in evidence_types and len(source_names) >= 2:
+        return "formal_independent"
+    if "company_formal_disclosure" in evidence_types or "company_pr" in evidence_types:
+        return "single_ultimate"
+    if evidence_types:
+        return "media_only"
+    return ""
+
+
+def _revenue_composite(analysis: dict[str, Any]) -> dict[str, Any]:
+    grade = str(analysis.get("evidence_grade") or "E").upper()
+    evidence = {
+        "A": 100.0,
+        "B": 82.0,
+        "C": 62.0,
+        "D": 40.0,
+        "E": 18.0,
+    }.get(grade, 18.0)
+    founder_fit = float(analysis.get("founder_fit", 0) or 0)
+    entry_fit = float(analysis.get("entry_fit", 0) or 0)
+    quiet_money = float(analysis.get("quiet_money_score", 0) or 0)
+    confidence = float(analysis.get("confidence", 0) or 0)
+    case = analysis.get("case", {})
+    risk_flags = set(case.get("risk_flags", []))
+    risk_penalty = _risk_penalty(risk_flags, entry_fit)
+    wildcard_bonus = 6.0 if analysis.get("protected_as_watchlist") else 0.0
+    score = (
+        evidence * 0.25
+        + founder_fit * 0.20
+        + entry_fit * 0.20
+        + quiet_money * 0.20
+        + confidence * 0.15
+        - risk_penalty
+        + wildcard_bonus
+    )
+    return {
+        "score": round(max(0.0, min(100.0, score)), 1),
+        "evidence": round(evidence, 1),
+        "founder_fit": round(founder_fit, 1),
+        "entry_fit": round(entry_fit, 1),
+        "quiet_money": round(quiet_money, 1),
+        "confidence": round(confidence, 1),
+        "risk_penalty": round(risk_penalty, 1),
+        "wildcard_bonus": round(wildcard_bonus, 1),
+    }
+
+
+def _risk_penalty(risk_flags: set[str], entry_fit: float) -> float:
+    penalties = {
+        "heavy_capital": 18.0,
+        "requires_inventory": 12.0,
+        "enterprise_procurement": 10.0,
+        "regulated": 10.0,
+        "platform_dependency": 5.0,
+        "crowded_market": 5.0,
+        "human_operations": 4.0,
+        "technical_complexity": 5.0,
+        "data_dependency": 4.0,
+        "low_margin": 6.0,
+    }
+    penalty = sum(penalties.get(flag, 0.0) for flag in risk_flags)
+    if entry_fit >= 70:
+        penalty *= 0.55
+    elif entry_fit >= 58:
+        penalty *= 0.75
+    return min(penalty, 28.0)
+
+
+def _cap_status(status: str, cap: str) -> str:
+    return status if _status_rank(status) <= _status_rank(cap) else cap
+
+
+def _explain_alert(candidate: dict[str, Any], status: str, gates: list[str]) -> dict[str, Any]:
+    candidate_types = set(candidate.get("candidate_types", []))
+    grade = candidate.get("best_grade", "E")
+    composite = float(candidate.get("priority", 0) or 0)
+    suitability = _first(candidate.get("suitabilities", [])) or str(candidate.get("metrics", {}).get("suitability", ""))
+    evidence_independence = candidate.get("evidence_independence", "")
+    archetype = _first(candidate.get("archetypes", []))
+    gaps: list[str] = []
+
+    if evidence_independence in {"single_ultimate", "media_only"}:
+        gaps.append("Needs a second independent primary or hard-payment source.")
+    if suitability in {"Market Map", "Verify First"}:
+        gaps.append(f"Suitability is {suitability}; verify a smaller entry wedge before build commitment.")
+    if "heavy_capital" in candidate.get("risk_flags", []):
+        gaps.append("Heavy-capital risk means this should be treated as a market-map unless a software/service layer is found.")
+    if "enterprise_procurement" in candidate.get("risk_flags", []):
+        gaps.append("Enterprise procurement can exceed the 30-day validation window.")
+    if "revenue_case" not in candidate_types and grade in {"D", "E"}:
+        gaps.append("Evidence is still weak; look for payment or explicit buyer intent.")
+
+    if status == ACT_NOW:
+        reason = f"Evidence upgraded with high fit and composite score {composite:.1f}."
+    elif status == VALIDATE_SOON:
+        reason = f"{grade}-grade evidence with workable fit; composite score {composite:.1f}."
+    elif status == WATCH:
+        reason = f"Keep watching: {grade}-grade evidence, archetype {archetype or 'unknown'}, composite score {composite:.1f}."
+    else:
+        reason = f"New weak signal; preserve discovery value until repeat or stronger evidence appears."
+
+    if gates:
+        reason += f" Gates applied: {', '.join(gates)}."
+
+    next_validation = _next_validation(candidate, status, gaps)
+    return {
+        "level_reason": reason,
+        "evidence_gaps": gaps,
+        "next_validation": next_validation,
+    }
+
+
+def _next_validation(candidate: dict[str, Any], status: str, gaps: list[str]) -> str:
+    if gaps:
+        first_gap = gaps[0]
+        if "second independent" in first_gap:
+            return "Find one non-PR primary proof: filing, contract, invoice, customer receipt, or merchant/order data."
+        if "smaller entry wedge" in first_gap or "market-map" in first_gap:
+            return "Map the proven budget pool, then search for an adjacent B/C-grade software or service wedge."
+        if "Enterprise procurement" in first_gap:
+            return "Find a buyer-side workflow that can be tested without a full enterprise procurement cycle."
+    if status == VALIDATE_SOON:
+        return "Interview 3 reachable buyers and verify willingness to pay before creating an opportunity."
+    if status == ACT_NOW:
+        return "Create a focused validation sprint with buyer, channel, price, and kill criteria."
+    return _first(candidate.get("next_actions", [])) or "Collect one more independent signal before promoting."
+
+
+def _strongest_independence(left: str, right: str) -> str:
+    rank = {
+        "": 0,
+        "media_only": 1,
+        "single_ultimate": 2,
+        "formal_independent": 3,
+        "hard_independent": 4,
+    }
+    return left if rank.get(left, 0) >= rank.get(right, 0) else right
+
+
 def _prior_status_bias(prior: dict[str, Any]) -> str:
     grade_strength = GRADE_STRENGTH.get(prior.get("best_grade", "E"), 1)
+    archetype = prior.get("archetype", "")
+    if archetype in {"public_pr_mega_arr", "incumbent_market_map"}:
+        return WATCH
+    if archetype in {"quiet_b2b_paid_pilot", "renewal_repeat_payment", "indie_micro_saas"}:
+        if prior["case_count"] >= 2 or prior["avg_quiet_money_score"] >= 62 or prior["avg_entry_fit"] >= 64:
+            return VALIDATE_SOON
     if (
         grade_strength >= GRADE_STRENGTH["B"]
         and prior["avg_entry_fit"] >= 68
@@ -723,6 +1043,13 @@ def _prior_status_bias(prior: dict[str, Any]) -> str:
 
 def _prior_warning_triggers(prior: dict[str, Any]) -> list[str]:
     triggers = []
+    archetype = prior.get("archetype", "")
+    if archetype in {"public_pr_mega_arr", "incumbent_market_map"}:
+        triggers.append("treat as market map unless a smaller B/C wedge appears")
+    if archetype in {"quiet_b2b_paid_pilot", "renewal_repeat_payment"}:
+        triggers.append("payment-backed quiet-money pattern")
+    if archetype == "indie_micro_saas":
+        triggers.append("small self-serve software wedge with direct buyer proof")
     if prior["best_grade"] in {"A", "B"}:
         triggers.append("formal revenue proof or hard payment trace")
     if prior["avg_quiet_money_score"] >= 65:

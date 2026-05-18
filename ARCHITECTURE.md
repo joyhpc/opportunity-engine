@@ -1,313 +1,333 @@
 # ODE Architecture
 
-> 三层扁平架构设计文档
-
----
+This document describes the architecture that exists in the current repository. It is intentionally code-first: when it disagrees with old planning notes, this file wins.
 
 ## Design Principles
 
-1. **扁平优于分层**：3 层足够，不引入 4-5 层的复杂性
-2. **Gate 驱动推进**：每个阶段必须通过门禁，防止未验证的想法消耗资源
-3. **启发优于评判**：KILL 不是终点，reframe 给出转型路径
-4. **零依赖启动**：不需要 API Key、GPU 或外部服务即可运行核心功能
-5. **数据可审计**：所有状态存储在 YAML 文件中，可 `git diff` 追踪变化
+1. Keep access surfaces thin. CLI, JSON mode, Skill, MCP, and any future API should delegate to shared service commands instead of duplicating business logic.
+2. Keep `ode/service.py` as a stable facade. Move implementation into `ode/services/*` so the historical import path remains usable.
+3. Persist business state in plain YAML entities. The operator should be able to inspect and diff opportunities, signals, warnings, and reports.
+4. Separate discovery from judgment. `explore`, `pain`, `cases`, and `daily` create or rank candidates; gates and diagnostics decide how much confidence to give them.
+5. Treat revenue proof, trend proof, pain proof, and founder fit as different signals. Do not let launch attention or funding masquerade as payment evidence.
+6. Treat generated artifacts as governed outputs. Do not overwrite ambiguous user-authored files without an explicit decision.
 
----
+## Layer Diagram
 
-## Layer Architecture
-
-```
-┌──────────────────────────────────────────────────────────┐
-│                    ACCESS LAYER                          │
-│                                                          │
-│  ┌──────────┐  ┌──────────────┐  ┌─────┐  ┌──────────┐ │
-│  │ CLI      │  │ Claude Skill │  │ MCP │  │ API/Web  │ │
-│  │ cli.py   │  │ claude_skill │  │ WIP │  │ WIP      │ │
-│  └────┬─────┘  └──────┬───────┘  └──┬──┘  └────┬─────┘ │
-├───────┴──────────────┬─┴────────────┴──────────┴────────┤
-│                 ENGINE CORE                              │
-│                                                          │
-│  ┌─────────────────────────────────────────────────┐    │
-│  │  Pipeline DAG (engine/pipeline.py)              │    │
-│  │  Kahn's algorithm topo sort → stage scheduling  │    │
-│  └──────────────────┬──────────────────────────────┘    │
-│                     │                                    │
-│  ┌──────────────────▼──────────────────────────────┐    │
-│  │  Workers (engine/workers.py)                    │    │
-│  │  scan_worker · eval_worker · report_worker      │    │
-│  │  async functions, run via asyncio.gather()      │    │
-│  └──────────────────┬──────────────────────────────┘    │
-│                     │                                    │
-│  ┌──────────────────▼──────────────────────────────┐    │
-│  │  Gate Evaluator (engine/gate.py)                │    │
-│  │  SENSE gate · SCREEN gate · ANALYZE gate        │    │
-│  │  GO / MAYBE / KILL verdict                      │    │
-│  └─────────────────────────────────────────────────┘    │
-│                                                          │
-│  ┌─────────────────────────────────────────────────┐    │
-│  │  Heuristics (heuristics/) — decoupled           │    │
-│  │  explore · bridge · reframe · synthesize        │    │
-│  └─────────────────────────────────────────────────┘    │
-│                                                          │
-│  ┌─────────────────────────────────────────────────┐    │
-│  │  Tools (tools/)                                 │    │
-│  │  trend_scanner · market_sizer · financial_model │    │
-│  │  opportunity_scorer · competitor_matrix          │    │
-│  │  report_generator · tech_feasibility            │    │
-│  └─────────────────────────────────────────────────┘    │
-├──────────────────────────────────────────────────────────┤
-│                  INFRASTRUCTURE                          │
-│                                                          │
-│  ┌──────────────┐  ┌───────────────┐  ┌──────────────┐ │
-│  │ YAML Store   │  │ SQLite Cache  │  │ BM25 Index   │ │
-│  │ core/store   │  │ data/cache    │  │ data/knowledge│ │
-│  │ Git-tracked  │  │ TTL-based     │  │ pt-wrapper   │ │
-│  └──────────────┘  └───────────────┘  └──────────────┘ │
-└──────────────────────────────────────────────────────────┘
+```text
+User / Agent / MCP client
+        |
+        v
+Access surfaces
+  ode/cli.py
+  ode/cli_json.py
+  ode/cli_handlers.py
+  ode/integrations/claude_skill.py
+  ode/integrations/mcp_server.py
+  web/app.py, web/bridge.py (optional local UI)
+        |
+        v
+Shared command registry
+  ode/service_commands.py
+        |
+        v
+Public service facade
+  ode/service.py
+        |
+        v
+Domain service implementations
+  ode/services/opportunities.py
+  ode/services/discovery.py
+  ode/services/insights.py
+  ode/services/warnings.py
+  ode/services/dbs.py
+        |
+        v
+Engine, heuristics, tools
+  ode/engine/*
+  ode/heuristics/*
+  ode/tools/*
+        |
+        v
+Core and infrastructure
+  ode/core/models.py
+  ode/core/repository.py
+  ode/core/store.py
+  ode/core/scoring.py
+  ode/core/artifacts.py
+  ode/data/cache.py
 ```
 
----
+## Access Surfaces
 
-## Module Map
+| Surface | Code | Contract |
+|---|---|---|
+| CLI text mode | `ode/cli.py`, `ode/cli_parser.py`, `ode/cli_handlers.py` | Human-readable output. Should remain presentation-only. |
+| CLI JSON mode | `ode/cli_json.py` | Prints the raw service result envelope: `{"ok": bool, "data": dict, "message": str}`. |
+| Claude Skill | `ode/integrations/claude_skill.py` | `/ode` command handler; registered commands go through `service_commands`. |
+| MCP | `ode/integrations/mcp_server.py` | Currently read-only service tools: status, list, show, sources, cases, portfolio, compare, insights, lens. |
+| Local Web UI | `web/app.py`, `web/bridge.py` | Optional browser UI outside the runtime package. It calls `service_commands` only. |
+| Package API/Web | `ode/api/`, `ode/web/` | Reserved package directories. There is no packaged server or dashboard inside `ode`. |
 
-### Access Layer
+All access surfaces should converge on `ode/service_commands.py`. That registry knows the command name, read-only flag, default parameter conversion, and async executor.
 
-| Module | Path | Description |
-|--------|------|-------------|
-| CLI | `ode/cli.py` | Thin entry point over parser, handlers, and JSON mode |
-| Claude Skill | `ode/integrations/claude_skill.py` | `/ode` skill handler for Claude Code |
-| MCP Server | `ode/integrations/mcp_server.py` | MCP tool registration (Phase 3) |
-| API/Web | `ode/api/`, `ode/web/` | FastAPI + dashboard (Phase 3) |
+## Service Layer
 
-### Engine Core
+`ode/service.py` re-exports and wraps the implementation functions so existing code can continue importing `ode.service`.
 
-| Module | Path | Description |
-|--------|------|-------------|
-| Pipeline DAG | `ode/engine/pipeline.py` | Kahn's algorithm topo sort, stage scheduling, optional pt-engine integration |
-| Gate | `ode/engine/gate.py` | Stage gate evaluation: SENSE (signal count), SCREEN (weighted score + redlines), ANALYZE (NPV + regulatory) |
-| Workers | `ode/engine/workers.py` | `scan_worker`, `eval_worker`, `report_worker` — async functions, not independent processes |
-| Portfolio | `ode/engine/portfolio.py` | Multi-opportunity comparison and ranking |
+Implementation modules:
 
-### Heuristic Modules (Decoupled)
+| Module | Responsibilities |
+|---|---|
+| `ode/services/opportunities.py` | Create, list, show, scan, evaluate, report, status, portfolio, compare. |
+| `ode/services/discovery.py` | Source catalog, revenue cases, open exploration, pain listening. |
+| `ode/services/insights.py` | Synthesis, founder-fit lens, experiments, actuals, gate refresh. |
+| `ode/services/warnings.py` | Daily warning review, initial warning bootstrap, watchlist persistence. |
+| `ode/services/dbs.py` | Goal clarification, concept deconstruction, business diagnosis, DBS session, AI hardware workflow. |
+| `ode/services/result.py` | Result envelope helpers `ok()` and `fail()`. |
 
-| Module | Path | Trigger | Description |
-|--------|------|---------|-------------|
-| explore | `ode/heuristics/explore.py` | `ode explore` | Signal clustering → hypothesis generation, no keywords needed |
-| bridge | `ode/heuristics/bridge.py` | `ode eval` (auto) | Signal → 18-criterion score inference with confidence levels |
-| reframe | `ode/heuristics/reframe.py` | `ode insights` | MAYBE/KILL → concrete pivot strategies per weak dimension |
-| synthesize | `ode/heuristics/synthesize.py` | `ode insights` / report | Cross-data contradiction detection + blind spot analysis |
-| fit_lens | `ode/heuristics/fit_lens.py` | `ode lens` | Soft founder-fit sorting that preserves high-discovery wildcards |
+Service functions are async and return the same envelope shape:
 
-### Tools
+```json
+{
+  "ok": true,
+  "data": {},
+  "message": ""
+}
+```
 
-| Module | Path | Description |
-|--------|------|-------------|
-| Trend Scanner | `ode/tools/trend_scanner.py` | Google Trends + HackerNews API + Reddit scan |
-| Source Registry | `ode/tools/source_registry.py` | Auditable source catalog from `sources/opportunity_sources.yaml` |
-| Market Sizer | `ode/tools/market_sizer.py` | Top-down / bottom-up TAM/SAM/SOM estimation |
-| Financial Model | `ode/tools/financial_model.py` | Unit economics (LTV/CAC), 36-month projections, NPV |
-| Opportunity Scorer | `ode/tools/opportunity_scorer.py` | YC/a16z 6-dimension weighted scorecard, redline mechanism |
-| Competitor Matrix | `ode/tools/competitor_matrix.py` | Competitor landscape analysis |
-| Report Generator | `ode/tools/report_generator.py` | Markdown report generation with synthesis insights |
-| Tech Feasibility | `ode/tools/tech_feasibility.py` | Technology feasibility assessment |
+Blocking fetches and CPU-ish sync work should be run through `ode/core/async_utils.py::run_blocking`, not raw `run_in_executor` calls spread through the codebase.
 
-### Infrastructure
+## Engine Layer
 
-| Module | Path | Description |
-|--------|------|-------------|
-| YAML Store | `ode/core/store.py` | Generic entity CRUD, file-per-entity, Git-friendly |
-| Models | `ode/core/models.py` | Opportunity, Signal, Competitor, Evidence, WorkerResult dataclasses |
-| Constants | `ode/core/constants.py` | Stages, thresholds, scoring dimensions, paths |
-| SQLite Cache | `ode/data/cache.py` | TTL-based key-value cache |
-| BM25 Knowledge | `ode/data/knowledge.py` | Full-text search, wraps pt knowledge.py if available |
+The engine is small and explicit.
 
----
+| Module | Role |
+|---|---|
+| `ode/engine/workers.py` | Async worker functions: `scan_worker`, `eval_worker`, `report_worker`, plus convenience orchestration. Workers are not separate processes. |
+| `ode/engine/gate.py` | Gate evaluators for `SENSE`, `SCREEN`, and `ANALYZE`. |
+| `ode/engine/pipeline.py` | Seven-stage DAG declaration and Kahn topological scheduling helper. |
+| `ode/engine/portfolio.py` | Multi-opportunity summaries and comparison tables. |
+
+The declared pipeline stages are:
+
+```text
+SENSE -> SCREEN -> ANALYZE -> VALIDATE -> PLAN -> LAUNCH -> MONITOR
+```
+
+Only the first three stages have concrete gate evaluators today.
+
+## Gate Logic
+
+| Gate | Inputs | Verdict Rule |
+|---|---|---|
+| `SENSE` | signals | Strong signals count as 1. Medium signals count as 0.5. Effective count `>= 3` is `GO`; `>= 1.8` is `MAYBE`; lower is `KILL`. |
+| `SCREEN` | scoring result | Redlines force `KILL`. Otherwise weighted percentage `>= 70` is `GO`; `50-69` is `MAYBE`; `< 50` is `KILL`. |
+| `ANALYZE` | financials, regulatory facts | `NPV > 0` and no P0 regulatory risk is `GO`; positive NPV with P0 risk is `MAYBE`; otherwise `KILL`. |
+| Other stages | stage name only | Default pass-through returns `GO` with "No gate defined". |
+
+`refresh-gate` can append a new gate log entry when the verdict changes. For `SCREEN`, passed experiments can upgrade a borderline `MAYBE` to `GO` when the score is high enough.
 
 ## Data Flow
 
-### Complete Pipeline Flow
+### Create
 
-```
-User
- │
- ├─ "I don't know what to build"
- │   └─► ode explore
- │        ├── scan HN/Reddit (trend_scanner)
- │        ├── cluster signals (explore.cluster_signals)
- │        ├── generate hypotheses (explore.generate_hypotheses)
- │        └── output: ranked opportunity hypotheses + next steps
- │
- ├─ "I have an idea"
- │   └─► ode create → ode scan → ode eval → ode report
- │        │             │          │          │
- │        │             │          │          └── report_worker
- │        │             │          │               ├── report_generator
- │        │             │          │               └── synthesize (auto-appended)
- │        │             │          │
- │        │             │          └── eval_worker
- │        │             │               ├── market_sizer
- │        │             │               ├── competitor_matrix
- │        │             │               ├── financial_model
- │        │             │               ├── bridge.infer_scores (auto, if no --scores)
- │        │             │               ├── opportunity_scorer
- │        │             │               └── gate.evaluate_gate
- │        │             │                    └── GO / MAYBE / KILL
- │        │             │
- │        │             └── scan_worker
- │        │                  ├── trend_scanner.scan_all
- │        │                  ├── dedup + save signals
- │        │                  └── gate.evaluate_sense_gate
- │        │
- │        └── store.save_opportunity
- │
- └─ "Score is MAYBE/KILL, now what?"
-     └─► ode insights
-          ├── synthesize (contradictions + blind spots)
-          └── reframe (pivot strategies if score < 70)
+```text
+CLI/JSON/Skill
+  -> service_commands._create
+  -> service.create_opportunity
+  -> services.opportunities.create_opportunity
+  -> OpportunityRepository.find_duplicate
+  -> core.store.save_opportunity
+  -> data/opportunities/<id>.yaml
 ```
 
-### Gate Decision Logic
+Duplicate checks compare exact opportunity name and keyword overlap.
 
-```
-SENSE Gate (entry to SCREEN):
-  strong_count = Σ(signal.strength ∈ {强, 中→weighted})
-  strong >= 3 → GO
-  strong >= 1 → MAYBE
-  else       → KILL
+### Scan
 
-SCREEN Gate (entry to ANALYZE):
-  weighted_pct = Σ(dim_score × dim_weight) / total_weight × 10
-  redline triggered → KILL (override)
-  pct >= 70 → GO
-  pct >= 50 → MAYBE
-  pct <  50 → KILL
-
-ANALYZE Gate (entry to VALIDATE):
-  NPV > 0 AND no P0 regulatory risk → GO
-  else → KILL
+```text
+scan command
+  -> services.opportunities.scan
+  -> engine.workers.scan_worker
+  -> tools.trend_scanner.scan_all
+  -> tools.source_dispatch / source adapters
+  -> Signal YAML files
+  -> opportunity.signals updated
+  -> SENSE gate
 ```
 
----
+`scan_worker` preserves historical signal ids by extending `opportunity.signals` instead of replacing them.
 
-## Data Model
+### Evaluate
 
-### Entity Relationships
-
-```
-Opportunity (opp-xxx)
- ├── signals: [sig-xxx, ...]        → Signal entities
- ├── scores: {criterion: value}     → from scorer/bridge
- ├── market: {tam, sam, som, ...}   → from market_sizer
- ├── financials: {ltv, cac, ...}    → from financial_model
- ├── gate_log: [{gate, verdict}]    → history of gate decisions
- └── stage: SENSE|SCREEN|ANALYZE|...
-
-Signal (sig-xxx)
- ├── source: HN|Reddit|GoogleTrends
- ├── keyword, title, url
- ├── strength: 强|中|弱
- ├── momentum: 0-100
- └── opportunity_id: opp-xxx
-
-WorkerResult
- ├── worker: scan|eval|report
- ├── status: ok|failed
- ├── scores, artifacts, data
- └── next_action: advance|hold|kill
+```text
+eval command
+  -> services.opportunities.evaluate
+  -> engine.workers.eval_worker
+  -> optional market_sizer / financial_model
+  -> bridge.infer_scores if no --scores and signals exist
+  -> core.scoring.OpportunityScorer
+  -> SCREEN or ANALYZE gate
+  -> opportunity YAML updated
 ```
 
-### Storage Layout
+Manual `--scores` can override or bypass bridge inference.
 
-```
-~/opportunity-engine/data/
-├── opportunities/
-│   └── opp-{uuid}.yaml         # One file per opportunity
-├── signals/
-│   └── sig-{uuid}.yaml         # One file per signal
-├── competitors/
-│   └── comp-{uuid}.yaml
-├── evidence/
-│   └── ev-{uuid}.yaml
-├── reports/
-│   └── opp-{id}_{stage}.md     # Generated reports
-└── cache.db                    # SQLite TTL cache
+### Report
+
+```text
+report command
+  -> services.opportunities.generate_report
+  -> engine.workers.report_worker
+  -> tools.report_generator
+  -> heuristics.synthesize appended when useful
+  -> latest saved DBS diagnostic appended when present
+  -> data/reports/<opp_id>_<stage>.md
 ```
 
----
+### Discovery And Warning
 
-## Heuristic System Design
-
-The heuristic modules are **decoupled** from the core engine — they can be removed without breaking any pipeline functionality.
-
-### Why Decoupled?
-
-1. **不同生命周期**：核心评估逻辑稳定，启发规则需要频繁迭代
-2. **可选使用**：用户可以跳过启发直接手动评分
-3. **可测试性**：纯函数，不依赖 IO，易于单元测试
-4. **可替换**：未来可接入 LLM 作为启发源，不影响引擎
-
-### Bridge Auto-Scoring Flow
-
-```
-eval_worker receives no --scores
-  │
-  ├── load signals for this opportunity
-  ├── call bridge.infer_scores(signals, domain, market, financials)
-  │    ├── Market criteria: signal volume + diversity → tam_size estimate
-  │    ├── Competition: keyword detection → intensity inference
-  │    ├── Economics: financial data → LTV/CAC score, or SaaS defaults
-  │    ├── Validation: pain keywords → pain_evidence estimate
-  │    └── AI-Native: AI keyword density → system_rethink score
-  ├── scores_to_flat() → {criterion: score}
-  └── proceed to scoring with inferred scores
+```text
+cases -> revenue_cases analyzer -> evidence grades and fit
+pain -> source_dispatch -> pain_listener -> validation queues
+explore -> source fetch -> cluster -> hypotheses
+daily -> pain + cases + optional explore + portfolio -> watchlist + daily report
 ```
 
-Each inferred score includes a confidence tag (`auto` or `data`) and reasoning string, so the user knows which scores to trust and which to override.
+Daily state is stored under `data/alerts/`, and daily reports under `data/reports/daily/`.
 
----
+### DBS Diagnostics
 
-## Integration Points
-
-### project-tracker Bridge
-
-```
-ode eval <id>        → opportunity scored and gated
-ode insights <id>    → insights generated
-  │
-  └── When opportunity reaches GRADUATED status:
-      pt_bridge.promote_to_project(opp)
-        └── subprocess: cd ~/project-tracker && python3 pt decision --add "..."
+```text
+dbs/clarify/diagnose/deconstruct
+  -> services.dbs
+  -> heuristics.dbs
+  -> optional append_dbs_diagnostic
+  -> opportunity.diagnostics[]
 ```
 
-### Claude Code Skill
+DBS outputs are advisory in v1. They are displayed in `show`, included in `insights`, and appended to generated reports when saved.
 
+## Core Data Model
+
+The primary dataclasses live in `ode/core/models.py`.
+
+| Entity | Stored Under | Notes |
+|---|---|---|
+| `Opportunity` | `data/opportunities/` | Stage, status, scores, market, financials, regulatory notes, linked signal ids, gate log, experiments, diagnostics. |
+| `Signal` | `data/signals/` | Source, keyword, title, momentum, strength, raw data, URL, opportunity id. |
+| `Competitor` | `data/competitors/` | Landscape fields and opportunity id. |
+| `Evidence` | `data/evidence/` | Source URL, structured data, confidence, opportunity id. |
+| `WorkerResult` | returned, not persisted by default | Worker status, scores, artifacts, next action, message, data. |
+
+YAML I/O is implemented by `ode/core/store.py`. `ode/core/repository.py` is a small boundary used by service code so duplicate detection and lookup behavior stay centralized.
+
+## Source Registry
+
+The catalog is `sources/opportunity_sources.yaml`. Runtime dispatch is implemented by:
+
+- `ode/tools/source_registry.py`
+- `ode/tools/source_dispatch.py`
+- adapters under `ode/tools/sources/`
+
+Important distinction:
+
+- `status: active` means a source has a runtime adapter and declared context.
+- `status: optional` means it needs extra dependency or input before it can run.
+- `status: manual` means the operator may store curated local signals.
+- `status: planned` means it is only a coverage target.
+- `used_by_scan_workers` specifically means the source belongs to the `scan_worker` context.
+
+Current contexts:
+
+| Context | Sources |
+|---|---|
+| `scan_worker` | `hackernews_topstories`, `reddit_hot_rss`, optional `google_trends` |
+| `explore` | `hackernews_topstories`, `reddit_hot_rss`, optional `google_trends` |
+| `pain_listener` | `hackernews_topstories`, `reddit_hot_rss`, `producthunt_feed` |
+
+## Scoring
+
+`ode/tools/opportunity_scorer.py` owns the scorecard. `ode/core/scoring.py` adapts scorer output into `Opportunity.scores`.
+
+Stored scores include:
+
+- dimension averages by human-readable dimension name;
+- `_weighted_pct`;
+- `_scoring_details`.
+
+The top-level dimensions are:
+
+1. Market Attractiveness
+2. Competitive Landscape
+3. Capability Fit
+4. Economic Viability
+5. Validation Strength
+6. AI-Native Potential
+
+`ode/heuristics/bridge.py` can infer flat score inputs from signals, market data, and financial data when `eval` receives no explicit `--scores`.
+
+## Heuristics
+
+Heuristics are deliberately decoupled from the engine. They can be used through services or reports without becoming hidden stage transitions.
+
+| Module | Main Entry | Behavior |
+|---|---|---|
+| `explore.py` | `services.discovery.explore_signals` | Open-ended signal clustering and hypothesis generation. |
+| `pain_listener.py` | `services.discovery.listen_pains` | C/D/E pain evidence grading, downranking launch/success stories, validation queues. |
+| `revenue_cases.py` | `services.discovery.analyze_revenue_cases` | A-E revenue evidence grading, fit, quiet-money and verification steps. |
+| `daily_warning.py` | `services.warnings.run_daily_review` | Merges pain, cases, explore, and portfolio into watchlist updates. |
+| `fit_lens.py` | `services.insights.apply_lens` | Soft founder-fit recommendation. It does not mutate opportunities. |
+| `synthesize.py` | `services.insights.get_insights`, report worker | Contradiction and blind-spot detection. |
+| `reframe.py` | `services.insights.get_insights` | Pivot suggestions when stored weighted score is below 70. |
+| `dbs.py` | `services.dbs.*` | Deterministic commercial diagnosis, saved advisory records, copyability checks. |
+| `ai_hardware_workflow.py` | `services.dbs.build_ai_hardware_workflow` | Map-first hardware opportunity workflow contract. |
+
+## Imports And Prototypes
+
+Top-level `imports/` contains audited external or historical material. It is not an active second app.
+
+`ode/imports/detector_integration.py` is the adapter that maps imported `opportunity-detector` assets into ODE's seven-stage import contract.
+
+Top-level `prototypes/` contains experiments. Runtime code must not import from it.
+
+Boundary tests enforce both rules.
+
+## Artifact Governance
+
+`ode/core/artifacts.py` provides `plan_artifact_write`. It classifies generated-file writes as:
+
+- `create`
+- `update_generated`
+- `version`
+- `conflict`
+- `blocked`
+
+Use it before creating reports, maps, rendered documents, validation scripts, or other generated artifacts outside the normal `data/reports/` worker path.
+
+## Testing Contract
+
+Recommended verification:
+
+```bash
+python tools/check_environment.py
+python tools/validate_import_integration.py
+python -m pytest
 ```
-User types: /ode scan --keywords "AI,robotics"
-  └── claude_skill.py
-       ├── shlex.split(args)
-       └── subprocess: python3 -m ode scan --keywords "AI,robotics"
-```
 
----
+High-value boundary tests:
 
-## Development Phases
+- `tests/test_cli_surface.py`: parser commands, JSON mode, service registry coverage, Skill behavior.
+- `tests/test_service_boundaries.py`: service facade split, repository/scorer boundaries, MCP read-only tools.
+- `tests/test_project_structure.py`: runtime package boundaries and artifact governance.
+- `tests/test_source_registry.py`: source catalog, context dispatch, failure notes.
+- `tests/test_opportunity_scan_quality.py`: generated opportunity scan quality contract.
 
-| Phase | Status | Description |
-|-------|--------|-------------|
-| Phase 1 | Done | Core models + YAML store + constants |
-| Phase 2 | Done | Pipeline DAG + gate + workers + tools |
-| Phase 3 (WIP) | Stub | MCP server + FastAPI + Web dashboard |
-| Phase 4 | Done | Configuration externalization (YAML configs) |
-| Phase 5 | Done | Pipeline orchestration + JSON sidecar contracts |
-| Phase 6 | Done | Heuristic modules: explore, bridge, reframe, synthesize |
-| Phase 7 | Done | Founder Fit Lens: soft sorting without early hard filtering |
+## Known Deferred Work
 
-## Repository Structure
-
-Operational repository boundaries are documented in
-[`docs/03-project-structure.md`](docs/03-project-structure.md). In short:
-
-- `ode/` is the only active runtime package.
-- `imports/` is audited legacy/source material.
-- `prototypes/` is experimental and must not be imported by runtime code.
-- `flows/`, `schemas/`, and `examples/` define reproducible contracts.
+- No REST/API server.
+- No web dashboard.
+- No persistent run ledger yet.
+- MCP exposes only read-only tools.
+- `VALIDATE`, `PLAN`, `LAUNCH`, and `MONITOR` are declared stages without dedicated gate evaluators.
+- Planned source registry entries are not scanned until adapters and tests are added.

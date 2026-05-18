@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import argparse
 
+from ode.core.constants import EVIDENCE_GRADES, PAIN_EVIDENCE_GRADES
+
 
 def build_parser() -> argparse.ArgumentParser:
     """Build the top-level ODE argument parser."""
@@ -77,12 +79,53 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--min-grade",
-        choices=["A", "B", "C", "D", "E"],
+        choices=list(EVIDENCE_GRADES),
         help="Minimum evidence grade to include",
     )
     p.add_argument("--top", type=int, help="Limit number of cases")
     p.add_argument("--profile", help="Path to founder profile JSON")
     p.add_argument("--profile-json", help="Inline founder profile JSON")
+
+    p = sub.add_parser("dbs", help="Run the DBS diagnostic chain")
+    p.add_argument("--text", required=True, help="Question, goal, or business direction to diagnose")
+    p.add_argument("--opp-id", help="Optional opportunity ID or name")
+    p.add_argument("--facts-json", help="Inline business facts JSON")
+    p.add_argument("--product", help="Product or offer")
+    p.add_argument("--price", help="Price")
+    p.add_argument("--buyer", help="Buyer segment")
+    p.add_argument("--acquisition", help="Acquisition channel")
+    p.add_argument("--delivery", help="Delivery method")
+    p.add_argument("--monthly-revenue", help="Current monthly revenue")
+    p.add_argument("--demand", help="Demand or willingness-to-pay evidence")
+    p.add_argument("--scalability", help="Repeatability or delegation notes")
+    p.add_argument("--save", action="store_true", help="Save diagnostic to the opportunity")
+
+    p = sub.add_parser("clarify", help="Clarify a fuzzy commercial goal")
+    p.add_argument("--text", required=True, help="Goal or question to clarify")
+    p.add_argument("--opp-id", help="Optional opportunity ID or name")
+    p.add_argument("--save", action="store_true", help="Save diagnostic to the opportunity")
+
+    p = sub.add_parser("diagnose", help="Apply DBS business diagnosis to an opportunity")
+    p.add_argument("opp_id", help="Opportunity ID or name")
+    p.add_argument("--facts-json", help="Inline business facts JSON")
+    p.add_argument("--product", help="Product or offer")
+    p.add_argument("--price", help="Price")
+    p.add_argument("--buyer", help="Buyer segment")
+    p.add_argument("--acquisition", help="Acquisition channel")
+    p.add_argument("--delivery", help="Delivery method")
+    p.add_argument("--monthly-revenue", help="Current monthly revenue")
+    p.add_argument("--demand", help="Demand or willingness-to-pay evidence")
+    p.add_argument("--scalability", help="Repeatability or delegation notes")
+    p.add_argument("--save", action="store_true", help="Save diagnostic to the opportunity")
+
+    p = sub.add_parser("deconstruct", help="Deconstruct fuzzy business concepts")
+    p.add_argument("--text", required=True, help="Concept or sentence to deconstruct")
+    p.add_argument("--opp-id", help="Optional opportunity ID or name")
+    p.add_argument("--save", action="store_true", help="Save diagnostic to the opportunity")
+
+    p = sub.add_parser("ai-hardware", help="Show the DBS-gated AI hardware opportunity workflow")
+    p.add_argument("--region", default="shenzhen", help="Primary region or local market")
+    p.add_argument("--team", default="solo_or_2_3_person_team", help="Founder/team constraint")
 
     sub.add_parser("portfolio", help="Show portfolio view")
 
@@ -104,7 +147,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--profile-json", help="Inline founder profile JSON")
     p.add_argument(
         "--min-grade",
-        choices=["C", "D", "E"],
+        choices=list(PAIN_EVIDENCE_GRADES),
         default="E",
         help="Minimum evidence grade to include",
     )
@@ -123,7 +166,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--profile-json", help="Inline founder profile JSON")
     p.add_argument(
         "--min-grade",
-        choices=["C", "D", "E"],
+        choices=list(PAIN_EVIDENCE_GRADES),
         default="E",
         help="Minimum pain evidence grade to include",
     )
@@ -135,7 +178,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--cases-region", choices=["global", "china"], help="Filter revenue cases by region")
     p.add_argument(
         "--cases-min-grade",
-        choices=["A", "B", "C", "D", "E"],
+        choices=list(EVIDENCE_GRADES),
         default="B",
         help="Minimum revenue evidence grade to include",
     )
@@ -153,7 +196,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--min-grade",
-        choices=["A", "B", "C", "D", "E"],
+        choices=list(EVIDENCE_GRADES),
         default="C",
         help="Minimum revenue evidence grade to learn from",
     )

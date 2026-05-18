@@ -1,0 +1,9 @@
+# Optional local web app dependencies.
+# Install only when you want to run the browser UI:
+#   python -m pip install -r web/requirements.txt
+
+fastapi>=0.110
+uvicorn[standard]>=0.29
+# httpx backs the FastAPI TestClient used by web/check.py and web/tests.
+httpx>=0.27
+

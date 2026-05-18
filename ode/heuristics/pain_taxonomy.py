@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ode.core.constants import EVIDENCE_GRADE_STRENGTH, PAIN_EVIDENCE_GRADES
+
 
 DEFAULT_REDDIT_SUBS = [
     "SaaS",
@@ -26,8 +28,8 @@ DEFAULT_PROFILE_KEYWORDS = [
     "workflow",
 ]
 
-GRADE_STRENGTH = {"C": 3, "D": 2, "E": 1}
-VALID_EVIDENCE_GRADES = tuple(GRADE_STRENGTH)
+GRADE_STRENGTH = EVIDENCE_GRADE_STRENGTH
+VALID_EVIDENCE_GRADES = PAIN_EVIDENCE_GRADES
 
 
 @dataclass(frozen=True)
